@@ -1,14 +1,16 @@
 # Test Plan — Autenticazione e Ruoli
 
+> **ARCHIVIATO** — Test plan non più applicabile. L'architettura ufficiale è definita in [ADR-002](002-decisione-app-anonima-admin-only.md). La branch `cursor/auth-fase-1-fondamenta-2423` è stata chiusa senza merge.
+
 | Campo | Valore |
 |---|---|
 | **ID** | TP-001 |
 | **Versione** | 1.0 |
 | **Data** | 2026-06-30 |
 | **Progetto** | Che facim'? |
-| **Riferimento architetturale** | `docs/adr/001-autenticazione-e-ruoli.md` |
+| **Riferimento architetturale** | `docs/archive/001-autenticazione-e-ruoli.md` (archiviato) |
 | **Tipo** | Test manuali |
-| **Stato** | Pronto per esecuzione post-implementazione |
+| **Stato** | Archiviato — superseded da ADR-002 |
 
 ---
 

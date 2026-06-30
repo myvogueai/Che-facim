@@ -2,9 +2,14 @@
 
 App eventi per la provincia di Potenza (Basilicata).
 
-**L'app pubblica è completamente anonima:** nessuna registrazione, nessun login, nessun account utente. Chiunque può esplorare eventi, salvare preferiti in locale e consultare le pagine informative.
+## Architettura ufficiale
 
-**L'autenticazione Firebase è riservata esclusivamente al pannello admin** (`/admin/`), dove gli amministratori creano, modificano ed eliminano eventi su Firestore.
+**App pubblica anonima + pannello admin autenticato** (decisione 2026-06-30, [ADR-002](docs/archive/002-decisione-app-anonima-admin-only.md)).
+
+- **App pubblica:** nessuna registrazione, nessun login, nessun account utente. Chiunque può esplorare eventi, salvare preferiti in locale e consultare le pagine informative.
+- **Admin:** Firebase Authentication riservata esclusivamente a `/admin/` per il CRUD eventi su Firestore.
+
+La branch `cursor/auth-fase-1-fondamenta-2423` (auth utente, ADR-001 Fase 1) è stata chiusa e eliminata senza merge.
 
 - **Stack:** HTML/CSS/JS vanilla + Firebase (Firestore + Auth admin-only)
 - **Hosting:** Firebase Hosting (`public/`)

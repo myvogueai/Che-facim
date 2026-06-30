@@ -583,3 +583,76 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   background: var(--notte-alta);
 }
 .admin-lista-item .azioni button.elimina { color: var(--terracotta); }
+
+/* ============ AUTH (ADR Fase 1) ============ */
+.auth-schermata {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 48px 24px 32px;
+}
+
+.auth-schermata h1 {
+  font-family: var(--font-display);
+  font-size: 26px;
+  margin-bottom: 6px;
+}
+
+.auth-banner {
+  background: var(--superficie);
+  border-radius: 12px;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--pietra-soft);
+  margin-bottom: 20px;
+}
+
+.auth-banner.success {
+  border-left: 3px solid var(--verde-gratis);
+}
+
+.auth-banner.errore {
+  border-left: 3px solid var(--terracotta);
+  color: var(--pietra);
+}
+
+.auth-link-riga {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: var(--lavanda);
+}
+
+.auth-link-riga a {
+  color: var(--terracotta);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.auth-errore {
+  color: var(--terracotta);
+  font-size: 13.5px;
+  margin-top: 12px;
+  display: none;
+}
+
+.auth-errore.visibile {
+  display: block;
+}
+
+.auth-splash {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--notte);
+  z-index: 1000;
+  font-size: 14px;
+  color: var(--lavanda);
+}
+
+.auth-splash.nascosto {
+  display: none;
+}

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Accedi — Che facim'?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+
+  <div class="auth-splash" id="auth-splash">Caricamento…</div>
+
+  <div class="auth-schermata" id="auth-contenuto" hidden>
+    <img src="../assets/img/logo-header.png" alt="Che facim'?" class="logo-app" style="width:52px;height:52px;margin-bottom:20px;" />
+    <h1>Accedi</h1>
+    <p class="sotto-titolo" style="margin-bottom:28px;">Entra per scoprire gli eventi in provincia di Potenza</p>
+
+    <div class="auth-banner success" id="banner-registrato" hidden>
+      Registrazione completata. Controlla la tua email e verifica l'account prima di accedere.
+    </div>
+
+    <form class="admin-form" id="form-login" style="padding:0;">
+      <div class="campo">
+        <label for="email">Email</label>
+        <input type="email" id="email" required autocomplete="username" />
+      </div>
+      <div class="campo">
+        <label for="password">Password</label>
+        <input type="password" id="password" required autocomplete="current-password" />
+      </div>
+      <button type="submit" class="bottone-primario" id="bottone-login">Accedi</button>
+      <p class="auth-errore" id="login-errore"></p>
+    </form>
+
+    <p class="auth-link-riga">
+      Non hai un account? <a href="register.html">Registrati</a>
+    </p>
+  </div>
+
+  <script type="module">
+    import { login, getUserProfile, logout } from "../assets/auth.js";
+    import { ensureUserProfile, updateLastLogin } from "../assets/users-data.js";
+    import { guard, getPageConfig, getPostLoginRedirect, redirect, sanitizeReturnTo } from "../assets/router.js";
+
+    const splash = document.getElementById("auth-splash");
+    const contenuto = document.getElementById("auth-contenuto");
+    const form = document.getElementById("form-login");
+    const erroreEl = document.getElementById("login-errore");
+    const bottone = document.getElementById("bottone-login");
+    const bannerRegistrato = document.getElementById("banner-registrato");
+
+    function mostraErrore(msg) {
+      erroreEl.textContent = msg;
+      erroreEl.classList.add("visibile");
+    }
+
+    function nascondiErrore() {
+      erroreEl.textContent = "";
+      erroreEl.classList.remove("visibile");
+    }
+
+    async function init() {
+      const allowed = await guard(getPageConfig());
+      splash.classList.add("nascosto");
+      contenuto.hidden = false;
+      if (!allowed) return;
+
+      if (new URLSearchParams(location.search).get("registered") === "1") {
+        bannerRegistrato.hidden = false;
+      }
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      nascondiErrore();
+      bottone.disabled = true;
+      bottone.textContent = "Accesso…";
+
+      try {
+        const user = await login(
+          document.getElementById("email").value,
+          document.getElementById("password").value
+        );
+
+        await user.reload();
+
+        let profile = await getUserProfile(true);
+        if (!profile) {
+          profile = await ensureUserProfile(user);
+        }
+
+        if (profile?.status === "suspended") {
+          mostraErrore("Il tuo account è sospeso. Contatta il supporto.");
+          return;
+        }
+
+        if (!user.emailVerified) {
+          await logout();
+          mostraErrore("Verifica la tua email prima di accedere. Controlla la posta in arrivo.");
+          return;
+        }
+
+        await updateLastLogin(user.uid);
+
+        const params = new URLSearchParams(location.search);
+        const returnTo = sanitizeReturnTo(params.get("returnTo"));
+        const destination = getPostLoginRedirect(profile, returnTo);
+
+        if (destination) {
+          redirect(destination);
+        } else {
+          mostraErrore("Accesso non disponibile al momento. Riprova più tardi.");
+        }
+      } catch {
+        mostraErrore("Email o password non corrette.");
+      } finally {
+        bottone.disabled = false;
+        bottone.textContent = "Accedi";
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

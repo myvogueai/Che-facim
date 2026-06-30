@@ -2,9 +2,9 @@
 // Modulo condiviso per leggere/scrivere eventi su Firestore.
 // Usato sia dalla app pubblica che dal pannello admin.
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { app, db } from "./auth.js";
+export { app, db };
 import {
-  getFirestore,
   collection,
   addDoc,
   updateDoc,
@@ -16,11 +16,6 @@ import {
   orderBy,
   Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { firebaseConfig } from "./firebase-config.js";
-
-const app = initializeApp(firebaseConfig);
-export { app };
-export const db = getFirestore(app);
 
 const COLLEZIONE = "eventi";
 

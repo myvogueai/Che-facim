@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Admin — Che facim'?</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+
+  <!-- ====== SCHERMATA LOGIN ====== -->
+  <div id="vista-login" style="padding: 80px 24px;">
+    <h1 style="font-family: var(--font-display); font-size: 26px; margin-bottom: 6px;">Accesso admin</h1>
+    <p class="sotto-titolo" style="margin-bottom: 28px;">Solo per chi gestisce Che facim'?</p>
+    <form id="form-login" class="admin-form" style="padding: 0;">
+      <div class="campo">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" required autocomplete="username" />
+      </div>
+      <div class="campo">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" required autocomplete="current-password" />
+      </div>
+      <button type="submit" class="bottone-primario" id="bottone-login">Accedi</button>
+      <p id="login-errore" style="color: var(--terracotta); font-size: 13.5px; display:none;"></p>
+    </form>
+  </div>
+
+  <!-- ====== CONTENUTO ADMIN (visibile solo dopo login) ====== -->
+  <div id="vista-admin" style="display:none;">
+
+  <header class="app-header" style="display:flex; justify-content:space-between; align-items:flex-start;">
+    <div class="header-riga">
+      <img src="../assets/img/logo-header.png" alt="Che facim'?" class="logo-app" style="width:42px; height:42px;" />
+      <div>
+        <h1>Admin eventi</h1>
+        <p class="sotto-titolo">Inserisci, modifica o elimina eventi</p>
+      </div>
+    </div>
+    <button id="bottone-logout" style="font-size:13px; color: var(--lavanda); padding: 8px 12px; background: var(--superficie); border-radius: 10px;">Esci</button>
+  </header>
+
+  <div style="display:flex; gap:10px; padding: 0 20px 16px;">
+    <button class="filtri-bottone" id="tab-nuovo" style="background: var(--terracotta); color:#fff;">+ Nuovo evento</button>
+    <button class="filtri-bottone" id="tab-lista">Lista eventi</button>
+  </div>
+
+  <!-- ====== FORM NUOVO/MODIFICA EVENTO ====== -->
+  <form class="admin-form" id="form-evento">
+    <input type="hidden" id="evento-id" />
+
+    <div class="campo">
+      <label for="titolo">Titolo evento *</label>
+      <input type="text" id="titolo" required placeholder="es. Sagra del Peperone Crusco" />
+    </div>
+
+    <div class="campo">
+      <label for="sottotitolo">Sottotitolo (artista, DJ, occasione)</label>
+      <input type="text" id="sottotitolo" placeholder="es. Orchestra spettacolo Pino Daniele" />
+    </div>
+
+    <div class="campo-riga">
+      <div class="campo">
+        <label for="locale">Locale / Venue *</label>
+        <input type="text" id="locale" required placeholder="es. Piazza Plebiscito" />
+      </div>
+      <div class="campo">
+        <label for="comune">Comune *</label>
+        <input type="text" id="comune" required placeholder="es. Potenza" />
+      </div>
+    </div>
+
+    <div class="campo-riga">
+      <div class="campo">
+        <label for="lat">Latitudine *</label>
+        <input type="number" step="any" id="lat" required placeholder="40.6404" />
+      </div>
+      <div class="campo">
+        <label for="lng">Longitudine *</label>
+        <input type="number" step="any" id="lng" required placeholder="15.8056" />
+      </div>
+    </div>
+    <p style="font-size:12px; color: var(--lavanda); margin-top:-8px;">
+      Suggerimento: cerca il locale su Google Maps, tasto destro sul punto → copia le coordinate.
+    </p>
+
+    <div class="campo-riga">
+      <div class="campo">
+        <label for="data">Data *</label>
+        <input type="date" id="data" required />
+      </div>
+      <div class="campo">
+        <label for="orario">Orario *</label>
+        <input type="time" id="orario" required />
+      </div>
+    </div>
+
+    <div class="campo-riga">
+      <div class="campo">
+        <label for="categoria">Categoria *</label>
+        <select id="categoria" required>
+          <option value="musica">Musica live</option>
+          <option value="sagra">Sagra / Festa paesana</option>
+          <option value="nightlife">Discoteca / Nightlife</option>
+          <option value="teatro">Teatro / Cultura</option>
+          <option value="sport">Sport</option>
+          <option value="altro">Altro</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label for="prezzo">Prezzo</label>
+        <input type="text" id="prezzo" placeholder="Gratis / 10€ / A pagamento" value="Gratis" />
+      </div>
+    </div>
+
+    <div class="campo">
+      <label for="immagine_url">URL locandina/immagine</label>
+      <input type="url" id="immagine_url" placeholder="https://..." />
+    </div>
+
+    <div class="campo">
+      <label for="descrizione">Descrizione</label>
+      <textarea id="descrizione" placeholder="Dettagli evento, programma, info..."></textarea>
+    </div>
+
+    <div class="campo">
+      <label for="contatti">Contatti organizzatore</label>
+      <input type="text" id="contatti" placeholder="Tel / WhatsApp / email" />
+    </div>
+
+    <div class="campo-riga" style="align-items:center;">
+      <label style="display:flex; align-items:center; gap:8px; font-size:14px; color: var(--pietra);">
+        <input type="checkbox" id="in_evidenza" style="width:auto;" />
+        In evidenza (promo a pagamento)
+      </label>
+    </div>
+
+    <button type="submit" class="bottone-primario" id="bottone-salva">Pubblica evento</button>
+    <button type="button" class="filtri-bottone" id="bottone-annulla-modifica" style="display:none;">Annulla modifica</button>
+  </form>
+
+  <!-- ====== LISTA EVENTI (ADMIN) ====== -->
+  <div style="padding: 0 20px 100px; display:none;" id="vista-lista">
+    <div id="lista-admin"></div>
+  </div>
+
+  </div> <!-- fine vista-admin -->
+
+  <script type="module">
+    import { creaEvento, aggiornaEvento, eliminaEvento, getTuttiEventiAdmin } from '../assets/eventi-data.js';
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const auth = getAuth();
+    const vistaLogin = document.getElementById('vista-login');
+    const vistaAdmin = document.getElementById('vista-admin');
+    const formLogin = document.getElementById('form-login');
+    const loginErrore = document.getElementById('login-errore');
+    const bottoneLogin = document.getElementById('bottone-login');
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        vistaLogin.style.display = 'none';
+        vistaAdmin.style.display = 'block';
+      } else {
+        vistaLogin.style.display = 'block';
+        vistaAdmin.style.display = 'none';
+      }
+    });
+
+    formLogin.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      bottoneLogin.disabled = true;
+      bottoneLogin.textContent = 'Accesso…';
+      loginErrore.style.display = 'none';
+      try {
+        await signInWithEmailAndPassword(
+          auth,
+          document.getElementById('login-email').value.trim(),
+          document.getElementById('login-password').value
+        );
+      } catch (err) {
+        loginErrore.textContent = 'Email o password non corrette.';
+        loginErrore.style.display = 'block';
+      } finally {
+        bottoneLogin.disabled = false;
+        bottoneLogin.textContent = 'Accedi';
+      }
+    });
+
+    document.getElementById('bottone-logout').addEventListener('click', () => signOut(auth));
+
+    const formEl = document.getElementById('form-evento');
+    const vistaListaEl = document.getElementById('vista-lista');
+    const tabNuovo = document.getElementById('tab-nuovo');
+    const tabLista = document.getElementById('tab-lista');
+    const bottoneSalva = document.getElementById('bottone-salva');
+    const bottoneAnnulla = document.getElementById('bottone-annulla-modifica');
+
+    function mostraToast(msg, errore = false) {
+      const t = document.createElement('div');
+      t.className = 'toast' + (errore ? ' errore' : '');
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 2800);
+    }
+
+    function mostraTab(nome) {
+      if (nome === 'nuovo') {
+        formEl.style.display = 'flex';
+        vistaListaEl.style.display = 'none';
+        tabNuovo.style.background = 'var(--terracotta)';
+        tabNuovo.style.color = '#fff';
+        tabLista.style.background = 'var(--superficie)';
+        tabLista.style.color = 'var(--lavanda)';
+      } else {
+        formEl.style.display = 'none';
+        vistaListaEl.style.display = 'block';
+        tabLista.style.background = 'var(--terracotta)';
+        tabLista.style.color = '#fff';
+        tabNuovo.style.background = 'var(--superficie)';
+        tabNuovo.style.color = 'var(--lavanda)';
+        caricaListaAdmin();
+      }
+    }
+    tabNuovo.addEventListener('click', () => mostraTab('nuovo'));
+    tabLista.addEventListener('click', () => mostraTab('lista'));
+
+    function resetForm() {
+      formEl.reset();
+      document.getElementById('evento-id').value = '';
+      document.getElementById('prezzo').value = 'Gratis';
+      bottoneSalva.textContent = 'Pubblica evento';
+      bottoneAnnulla.style.display = 'none';
+    }
+
+    bottoneAnnulla.addEventListener('click', resetForm);
+
+    formEl.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      bottoneSalva.disabled = true;
+      bottoneSalva.textContent = 'Salvataggio…';
+
+      const id = document.getElementById('evento-id').value;
+      const dataVal = document.getElementById('data').value;
+      const orarioVal = document.getElementById('orario').value;
+
+      const dati = {
+        titolo: document.getElementById('titolo').value.trim(),
+        sottotitolo: document.getElementById('sottotitolo').value.trim(),
+        locale: document.getElementById('locale').value.trim(),
+        comune: document.getElementById('comune').value.trim(),
+        lat: document.getElementById('lat').value,
+        lng: document.getElementById('lng').value,
+        dataIso: `${dataVal}T${orarioVal}:00`,
+        orario: orarioVal,
+        categoria: document.getElementById('categoria').value,
+        prezzo: document.getElementById('prezzo').value.trim() || 'Gratis',
+        immagine_url: document.getElementById('immagine_url').value.trim(),
+        descrizione: document.getElementById('descrizione').value.trim(),
+        contatti: document.getElementById('contatti').value.trim(),
+        in_evidenza: document.getElementById('in_evidenza').checked,
+        stato: 'pubblicato'
+      };
+
+      try {
+        if (id) {
+          await aggiornaEvento(id, dati);
+          mostraToast('Evento aggiornato ✓');
+        } else {
+          await creaEvento(dati);
+          mostraToast('Evento pubblicato ✓');
+        }
+        resetForm();
+      } catch (err) {
+        console.error(err);
+        mostraToast('Errore: ' + err.message, true);
+      } finally {
+        bottoneSalva.disabled = false;
+        bottoneSalva.textContent = 'Pubblica evento';
+      }
+    });
+
+    async function caricaListaAdmin() {
+      const listaAdminEl = document.getElementById('lista-admin');
+      listaAdminEl.innerHTML = '<p class="stato-vuoto">Caricamento…</p>';
+      try {
+        const eventi = await getTuttiEventiAdmin();
+        if (eventi.length === 0) {
+          listaAdminEl.innerHTML = '<p class="stato-vuoto">Nessun evento ancora inserito.</p>';
+          return;
+        }
+        listaAdminEl.innerHTML = eventi.map(ev => {
+          const d = ev.data?.toDate ? ev.data.toDate() : new Date(ev.data);
+          const dataFmt = d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+          return `
+          <div class="admin-lista-item">
+            <div class="info">
+              <div class="t">${ev.titolo}</div>
+              <div class="d">${dataFmt} · ${ev.comune} · ${ev.stato}</div>
+            </div>
+            <div class="azioni">
+              <button data-modifica="${ev.id}">Modifica</button>
+              <button class="elimina" data-elimina="${ev.id}">Elimina</button>
+            </div>
+          </div>`;
+        }).join('');
+
+        listaAdminEl.querySelectorAll('[data-elimina]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            if (!confirm('Eliminare definitivamente questo evento?')) return;
+            try {
+              await eliminaEvento(btn.dataset.elimina);
+              mostraToast('Evento eliminato');
+              caricaListaAdmin();
+            } catch (err) {
+              mostraToast('Errore eliminazione', true);
+            }
+          });
+        });
+
+        listaAdminEl.querySelectorAll('[data-modifica]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const ev = eventi.find(e => e.id === btn.dataset.modifica);
+            if (!ev) return;
+            const d = ev.data?.toDate ? ev.data.toDate() : new Date(ev.data);
+
+            document.getElementById('evento-id').value = ev.id;
+            document.getElementById('titolo').value = ev.titolo || '';
+            document.getElementById('sottotitolo').value = ev.sottotitolo || '';
+            document.getElementById('locale').value = ev.locale || '';
+            document.getElementById('comune').value = ev.comune || '';
+            document.getElementById('lat').value = ev.lat || '';
+            document.getElementById('lng').value = ev.lng || '';
+            document.getElementById('data').value = d.toISOString().slice(0,10);
+            document.getElementById('orario').value = ev.orario || d.toTimeString().slice(0,5);
+            document.getElementById('categoria').value = ev.categoria || 'altro';
+            document.getElementById('prezzo').value = ev.prezzo || 'Gratis';
+            document.getElementById('immagine_url').value = ev.immagine_url || '';
+            document.getElementById('descrizione').value = ev.descrizione || '';
+            document.getElementById('contatti').value = ev.contatti || '';
+            document.getElementById('in_evidenza').checked = !!ev.in_evidenza;
+
+            bottoneSalva.textContent = 'Salva modifiche';
+            bottoneAnnulla.style.display = 'block';
+            mostraTab('nuovo');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          });
+        });
+      } catch (err) {
+        console.error(err);
+        listaAdminEl.innerHTML = '<p class="stato-vuoto">Errore nel caricamento.</p>';
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "eventi",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "stato", "order": "ASCENDING" },
+        { "fieldPath": "data", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

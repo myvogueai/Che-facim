@@ -44,6 +44,7 @@ function staticTests() {
 
   const required = [
     "public/assets/auth.js",
+    "public/assets/auth-errors.js",
     "public/assets/users-data.js",
     "public/assets/router.js",
     "public/assets/eventi-data.js",
@@ -106,6 +107,31 @@ function staticTests() {
     pass("STATIC-register-confirm", "validazione conferma password");
   } else {
     fail("STATIC-register-confirm", "register senza validazione password");
+  }
+
+  if (
+    registerHtml.includes("getRegisterErrorMessage") &&
+    registerHtml.includes('minlength="8"') &&
+    registerHtml.includes("La password deve contenere almeno 8 caratteri")
+  ) {
+    pass("STATIC-register-errors", "messaggi errore specifici su register");
+  } else {
+    fail("STATIC-register-errors", "register senza integrazione auth-errors");
+  }
+
+  const authErrors = readFileSync(join(ROOT, "public/assets/auth-errors.js"), "utf8");
+  const requiredCodes = [
+    "auth/email-already-in-use",
+    "auth/invalid-email",
+    "auth/weak-password",
+    "auth/too-many-requests",
+    "auth/network-request-failed"
+  ];
+  const missingCodes = requiredCodes.filter((code) => !authErrors.includes(code));
+  if (missingCodes.length === 0 && authErrors.includes("getRegisterErrorMessage")) {
+    pass("STATIC-auth-errors", "mapping codici Firebase Auth");
+  } else {
+    fail("STATIC-auth-errors", `codici mancanti: ${missingCodes.join(", ") || "funzione"}`);
   }
 }
 

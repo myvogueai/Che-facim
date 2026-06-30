@@ -197,8 +197,8 @@ async function main() {
       () => document.getElementById("register-errore")?.classList.contains("visibile")
     );
     const errA6 = await page.$eval("#register-errore", (el) => el.textContent);
-    if (errA6.includes("non riuscita") && !errA6.toLowerCase().includes("già")) {
-      pass("A6", "Email duplicata → messaggio generico");
+    if (errA6.toLowerCase().includes("già registrata")) {
+      pass("A6", "Email duplicata → messaggio specifico");
     } else {
       fail("A6", `Messaggio inatteso: ${errA6}`);
     }

@@ -28,11 +28,11 @@
       </div>
       <div class="campo">
         <label for="password">Password *</label>
-        <input type="password" id="password" required autocomplete="new-password" minlength="6" />
+        <input type="password" id="password" required autocomplete="new-password" minlength="8" />
       </div>
       <div class="campo">
         <label for="password_confirm">Conferma password *</label>
-        <input type="password" id="password_confirm" required autocomplete="new-password" minlength="6" />
+        <input type="password" id="password_confirm" required autocomplete="new-password" minlength="8" />
       </div>
       <button type="submit" class="bottone-primario" id="bottone-register">Crea account</button>
       <p class="auth-errore" id="register-errore"></p>
@@ -45,6 +45,7 @@
 
   <script type="module">
     import { register, logout } from "../assets/auth.js";
+    import { getRegisterErrorMessage } from "../assets/auth-errors.js";
     import { guard, getPageConfig, redirect } from "../assets/router.js";
 
     const splash = document.getElementById("auth-splash");
@@ -82,6 +83,11 @@
         return;
       }
 
+      if (password.length < 8) {
+        mostraErrore("La password deve contenere almeno 8 caratteri.");
+        return;
+      }
+
       bottone.disabled = true;
       bottone.textContent = "Creazione account…";
 
@@ -95,16 +101,7 @@
         const emulator = new URLSearchParams(location.search).get("emulator") === "1" ? "&emulator=1" : "";
         redirect(`/auth/login.html?registered=1${emulator}`);
       } catch (err) {
-        const code = err?.code || "";
-        if (code === "auth/weak-password") {
-          mostraErrore("La password è troppo debole. Usa almeno 6 caratteri.");
-        } else if (code === "auth/email-already-in-use") {
-          mostraErrore("Registrazione non riuscita. Controlla i dati inseriti.");
-        } else if (code === "auth/invalid-email") {
-          mostraErrore("Inserisci un indirizzo email valido.");
-        } else {
-          mostraErrore("Registrazione non riuscita. Controlla i dati inseriti.");
-        }
+        mostraErrore(getRegisterErrorMessage(err));
       } finally {
         bottone.disabled = false;
         bottone.textContent = "Crea account";

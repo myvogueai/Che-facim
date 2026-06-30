@@ -29,9 +29,9 @@ jobs:
             --project che-facim \
             --non-interactive
 
-      - name: Deploy Firestore rules
+      - name: Deploy Firestore rules and indexes
         run: |
           npx firebase-tools@15.22.3 deploy \
-            --only firestore:rules \
+            --only firestore:rules,firestore:indexes \
             --project che-facim \
             --non-interactive

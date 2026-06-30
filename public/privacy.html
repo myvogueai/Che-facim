@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Privacy — Che facim'?</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css" />
+<style>
+  .box-legale { background: var(--superficie); border-radius: 18px; margin: 0 20px 16px; padding: 22px 20px; }
+  .box-legale h2 { font-family: var(--font-display); font-size: 17px; margin: 20px 0 10px; color: var(--pietra); }
+  .box-legale h2:first-child { margin-top: 0; }
+  .box-legale p, .box-legale li { font-size: 14.5px; line-height: 1.65; color: var(--pietra-soft); margin-bottom: 10px; }
+  .box-legale ul { padding-left: 20px; margin-bottom: 10px; }
+  .box-legale a { color: var(--terracotta); text-decoration: underline; }
+  .aggiornamento { font-size: 13px; color: var(--lavanda); margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="header-riga">
+      <img src="assets/img/logo-header.png" alt="Che facim'?" class="logo-app" />
+      <div>
+        <h1>Privacy</h1>
+        <p class="sotto-titolo">Informativa sul trattamento dei dati</p>
+      </div>
+    </div>
+  </header>
+
+  <div class="box-legale">
+    <p class="aggiornamento">Ultimo aggiornamento: 30 giugno 2026</p>
+
+    <h2>1. Titolare del trattamento</h2>
+    <p>Il titolare del trattamento dei dati personali relativi al servizio Che facim'? è raggiungibile all'indirizzo <a href="mailto:info@chefacim.it">info@chefacim.it</a>.</p>
+
+    <h2>2. Natura del servizio</h2>
+    <p>Che facim'? è un'applicazione web che consente di consultare eventi nella provincia di Potenza. <strong>Non è richiesta alcuna registrazione</strong> per utilizzare l'app pubblica: non raccogliamo account utente, password o profili.</p>
+
+    <h2>3. Dati trattati</h2>
+    <p>In relazione all'uso dell'app pubblica possiamo trattare:</p>
+    <ul>
+      <li><strong>Dati tecnici di navigazione</strong> (indirizzo IP, tipo di browser, data e ora di accesso) necessari al funzionamento dell'hosting e alla sicurezza del servizio.</li>
+      <li><strong>Preferiti e calendario personale</strong>, salvati esclusivamente nel browser dell'utente (<em>localStorage</em>) e non trasmessi ai nostri server.</li>
+      <li><strong>Contenuti eventi</strong> (titolo, luogo, date, descrizioni, immagini) pubblicati dagli amministratori e consultabili da chiunque.</li>
+    </ul>
+    <p>Se ci contatti via email o WhatsApp (link in pagina About), trattiamo i dati che ci fornisci volontariamente (es. indirizzo email, numero di telefono, contenuto del messaggio) al solo fine di rispondere alla richiesta.</p>
+
+    <h2>4. Base giuridica e finalità</h2>
+    <ul>
+      <li>Erogazione del servizio e consultazione degli eventi: legittimo interesse / esecuzione del servizio richiesto dall'utente.</li>
+      <li>Sicurezza e manutenzione tecnica: legittimo interesse del titolare.</li>
+      <li>Risposta a richieste di contatto: esecuzione di misure precontrattuali o consenso, a seconda del caso.</li>
+    </ul>
+
+    <h2>5. Luogo del trattamento e fornitori</h2>
+    <p>Il sito è ospitato su <strong>Firebase / Google Cloud</strong> (infrastruttura hosting e database eventi). Google agisce come responsabile del trattamento secondo i propri termini e l'Accordo sul trattamento dei dati (DPA). Per maggiori informazioni: <a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Privacy Firebase</a>.</p>
+
+    <h2>6. Conservazione</h2>
+    <ul>
+      <li>I dati in <em>localStorage</em> restano sul dispositivo finché l'utente non li cancella o non svuota i dati del browser.</li>
+      <li>I log tecnici del hosting sono conservati per il tempo necessario alla sicurezza e alla manutenzione.</li>
+      <li>Le email di contatto sono conservate per il tempo necessario a gestire la richiesta.</li>
+    </ul>
+
+    <h2>7. Diritti dell'interessato</h2>
+    <p>In qualità di interessato hai diritto di accesso, rettifica, cancellazione, limitazione, opposizione e portabilità (nei casi previsti dal GDPR), nonché di proporre reclamo al Garante per la protezione dei dati personali. Per esercitare i diritti: <a href="mailto:info@chefacim.it">info@chefacim.it</a>.</p>
+
+    <h2>8. Cookie e tecnologie simili</h2>
+    <p>Per informazioni su cookie e storage locale vedi la <a href="cookie.html">Cookie Policy</a>.</p>
+
+    <h2>9. Modifiche</h2>
+    <p>Questa informativa può essere aggiornata. La data di revisione è indicata in alto.</p>
+  </div>
+
+  <div style="height: 90px;"></div>
+
+  <nav class="nav-inferiore">
+    <a class="nav-voce" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      Esplora
+    </a>
+    <a class="nav-voce" href="preferiti.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+      Preferiti
+    </a>
+    <a class="nav-voce" href="i-miei-eventi.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      I miei eventi
+    </a>
+    <a class="nav-voce" href="about.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      About
+    </a>
+  </nav>
+</body>
+</html>

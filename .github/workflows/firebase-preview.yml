@@ -6,7 +6,7 @@ on:
       channel_id:
         description: "Nome del preview channel (es. fase1-test)"
         required: false
-        default: "fase1-test"
+        default: "fase1-auth"
         type: string
       deploy_rules:
         description: "Deploy anche le Firestore rules (necessario per la registrazione)"
@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      CHANNEL_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.channel_id || 'fase1-test' }}
+      CHANNEL_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.channel_id || 'fase1-auth' }}
       DEPLOY_RULES: ${{ github.event_name == 'push' && 'true' || format('{0}', inputs.deploy_rules) }}
 
     steps:
@@ -39,10 +39,6 @@ jobs:
 
       - name: Deploy Hosting Preview Channel
         run: |
-          npx firebase-tools@15.22.3 hosting:channel:delete "${{ env.CHANNEL_ID }}" \
-            --project che-facim \
-            --force \
-            --non-interactive 2>/dev/null || true
           npx firebase-tools@15.22.3 hosting:channel:deploy "${{ env.CHANNEL_ID }}" \
             --project che-facim \
             --expires 7d \

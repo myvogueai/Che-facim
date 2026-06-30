@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       channel_id:
-        description: "Nome del preview channel (es. fase1-auth)"
+        description: "Nome del preview channel"
         required: false
-        default: "fase1-auth"
+        default: "fase1-preview"
         type: string
       deploy_rules:
         description: "Deploy anche le Firestore rules (necessario per la registrazione)"
@@ -27,14 +27,30 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      CHANNEL_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.channel_id || 'fase1-auth' }}
+      CHANNEL_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.channel_id || 'fase1-preview' }}
       DEPLOY_RULES: ${{ github.event_name == 'push' && 'true' || format('{0}', inputs.deploy_rules) }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Remove stale preview channel if present
+        continue-on-error: true
+        run: |
+          npx firebase-tools@15.22.3 hosting:channel:delete "${{ env.CHANNEL_ID }}" \
+            --project che-facim \
+            --force \
+            --non-interactive
+          sleep 15
+
       - name: Deploy Hosting Preview Channel
+        id: hosting
+        continue-on-error: true
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
@@ -42,12 +58,6 @@ jobs:
           projectId: che-facim
           channelId: ${{ env.CHANNEL_ID }}
           expires: 7d
-
-      - name: Authenticate with Google Cloud
-        if: env.DEPLOY_RULES == 'true'
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       - name: Deploy Firestore rules
         if: env.DEPLOY_RULES == 'true'
@@ -57,9 +67,27 @@ jobs:
             --project che-facim \
             --non-interactive
 
-      - name: Preview URL summary
+      - name: Verify preview URL
+        id: verify
         run: |
           PREVIEW_URL="https://${{ env.CHANNEL_ID }}--che-facim.web.app"
+          echo "url=${PREVIEW_URL}" >> "$GITHUB_OUTPUT"
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${PREVIEW_URL}/auth/login.html" || true)
+            echo "Tentativo $i: HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "ok=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "ok=false" >> "$GITHUB_OUTPUT"
+          exit 1
+
+      - name: Preview URL summary
+        if: steps.verify.outputs.ok == 'true'
+        run: |
+          PREVIEW_URL="${{ steps.verify.outputs.url }}"
           echo "## Preview Channel deployato" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Login:** ${PREVIEW_URL}/auth/login.html" >> "$GITHUB_STEP_SUMMARY"
@@ -67,3 +95,10 @@ jobs:
           echo "**Registrazione:** ${PREVIEW_URL}/auth/register.html" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "Produzione non modificata: https://che-facim.web.app" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail if preview not reachable
+        if: steps.verify.outputs.ok != 'true'
+        run: |
+          echo "Preview channel non raggiungibile. Log hosting step:"
+          echo "${{ steps.hosting.outputs.details_url }}"
+          exit 1

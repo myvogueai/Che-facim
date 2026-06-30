@@ -1,0 +1,28 @@
+{
+  "name": "che-facim",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "App eventi per la provincia di Potenza (Basilicata).",
+  "scripts": {
+    "test:fase1": "node scripts/test-fase1.js",
+    "test:fase1:e2e": "node scripts/test-fase1-e2e.js",
+    "test:fase1:all": "node scripts/run-fase1-tests.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/myvogueai/Che-facim.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/myvogueai/Che-facim/issues"
+  },
+  "homepage": "https://github.com/myvogueai/Che-facim#readme",
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.1",
+    "firebase": "^12.15.0",
+    "puppeteer": "^24.43.1"
+  }
+}

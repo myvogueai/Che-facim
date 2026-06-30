@@ -1,8 +1,4 @@
-// preferiti.js
-// Gestione preferiti lato client con localStorage.
-// Nessun login richiesto per l'MVP — se in futuro si aggiunge
-// autenticazione utenti, questo modulo si sostituisce con una
-// collezione Firestore "preferiti_utente/{uid}".
+// preferiti.js — preferiti salvati in localStorage (app pubblica anonima, nessun Firestore).
 
 const CHIAVE = 'lucania_tonight_preferiti';
 

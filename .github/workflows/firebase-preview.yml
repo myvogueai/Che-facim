@@ -1,0 +1,65 @@
+name: Deploy Preview Channel (Fase 1)
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel_id:
+        description: "Nome del preview channel (es. fase1-test)"
+        required: false
+        default: "fase1-test"
+        type: string
+      deploy_rules:
+        description: "Deploy anche le Firestore rules (necessario per la registrazione)"
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Deploy Hosting Preview Channel
+        run: |
+          npx firebase-tools@15.22.3 hosting:channel:deploy "${{ inputs.channel_id }}" \
+            --only hosting \
+            --project che-facim \
+            --expires 7d \
+            --non-interactive
+
+      - name: Deploy Firestore rules
+        if: inputs.deploy_rules
+        run: |
+          npx firebase-tools@15.22.3 deploy \
+            --only firestore:rules \
+            --project che-facim \
+            --non-interactive
+
+      - name: Preview URL summary
+        run: |
+          CHANNEL="${{ inputs.channel_id }}"
+          PREVIEW_URL="https://${CHANNEL}--che-facim.web.app"
+          echo "## Preview Channel deployato" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Pagina | URL |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Login | ${PREVIEW_URL}/auth/login.html |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Registrazione | ${PREVIEW_URL}/auth/register.html |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Home | ${PREVIEW_URL}/ |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Produzione **non modificata**: https://che-facim.web.app" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ inputs.deploy_rules }}" = "true" ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Firestore rules deployate a livello progetto (necessarie per la registrazione)." >> "$GITHUB_STEP_SUMMARY"
+          fi

@@ -9,9 +9,10 @@ import {
   signOut,
   createUserWithEmailAndPassword,
   sendEmailVerification,
-  deleteUser
+  deleteUser,
+  connectAuthEmulator
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, connectFirestoreEmulator } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
@@ -19,6 +20,18 @@ export { app };
 export const db = getFirestore(app);
 
 const auth = getAuth(app);
+
+if (typeof location !== "undefined") {
+  const useEmulator = new URLSearchParams(location.search).get("emulator") === "1";
+  if (useEmulator) {
+    try {
+      connectAuthEmulator(auth, "http://127.0.0.1:9099", { disableWarnings: true });
+      connectFirestoreEmulator(db, "127.0.0.1", 8080);
+    } catch {
+      // già connesso (ricarica pagina)
+    }
+  }
+}
 
 let authResolved = false;
 let currentUser = null;

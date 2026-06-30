@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Registrati — Che facim'?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+
+  <div class="auth-splash" id="auth-splash">Caricamento…</div>
+
+  <div class="auth-schermata" id="auth-contenuto" hidden>
+    <img src="../assets/img/logo-header.png" alt="Che facim'?" class="logo-app" style="width:52px;height:52px;margin-bottom:20px;" />
+    <h1>Registrati</h1>
+    <p class="sotto-titolo" style="margin-bottom:28px;">Crea un account per salvare i tuoi eventi preferiti</p>
+
+    <form class="admin-form" id="form-register" style="padding:0;">
+      <div class="campo">
+        <label for="display_name">Nome (opzionale)</label>
+        <input type="text" id="display_name" autocomplete="name" />
+      </div>
+      <div class="campo">
+        <label for="email">Email *</label>
+        <input type="email" id="email" required autocomplete="email" />
+      </div>
+      <div class="campo">
+        <label for="password">Password *</label>
+        <input type="password" id="password" required autocomplete="new-password" minlength="6" />
+      </div>
+      <div class="campo">
+        <label for="password_confirm">Conferma password *</label>
+        <input type="password" id="password_confirm" required autocomplete="new-password" minlength="6" />
+      </div>
+      <button type="submit" class="bottone-primario" id="bottone-register">Crea account</button>
+      <p class="auth-errore" id="register-errore"></p>
+    </form>
+
+    <p class="auth-link-riga">
+      Hai già un account? <a href="login.html">Accedi</a>
+    </p>
+  </div>
+
+  <script type="module">
+    import { register, logout } from "../assets/auth.js";
+    import { guard, getPageConfig, redirect } from "../assets/router.js";
+
+    const splash = document.getElementById("auth-splash");
+    const contenuto = document.getElementById("auth-contenuto");
+    const form = document.getElementById("form-register");
+    const erroreEl = document.getElementById("register-errore");
+    const bottone = document.getElementById("bottone-register");
+
+    function mostraErrore(msg) {
+      erroreEl.textContent = msg;
+      erroreEl.classList.add("visibile");
+    }
+
+    function nascondiErrore() {
+      erroreEl.textContent = "";
+      erroreEl.classList.remove("visibile");
+    }
+
+    async function init() {
+      const allowed = await guard(getPageConfig());
+      splash.classList.add("nascosto");
+      contenuto.hidden = false;
+      if (!allowed) return;
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      nascondiErrore();
+
+      const password = document.getElementById("password").value;
+      const passwordConfirm = document.getElementById("password_confirm").value;
+
+      if (password !== passwordConfirm) {
+        mostraErrore("Le password non coincidono.");
+        return;
+      }
+
+      bottone.disabled = true;
+      bottone.textContent = "Creazione account…";
+
+      try {
+        await register(
+          document.getElementById("email").value,
+          password,
+          document.getElementById("display_name").value
+        );
+        await logout();
+        redirect("/auth/login.html?registered=1");
+      } catch (err) {
+        const code = err?.code || "";
+        if (code === "auth/weak-password") {
+          mostraErrore("La password è troppo debole. Usa almeno 6 caratteri.");
+        } else if (code === "auth/email-already-in-use") {
+          mostraErrore("Registrazione non riuscita. Controlla i dati inseriti.");
+        } else if (code === "auth/invalid-email") {
+          mostraErrore("Inserisci un indirizzo email valido.");
+        } else {
+          mostraErrore("Registrazione non riuscita. Controlla i dati inseriti.");
+        }
+      } finally {
+        bottone.disabled = false;
+        bottone.textContent = "Crea account";
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

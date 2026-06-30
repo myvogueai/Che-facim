@@ -92,7 +92,8 @@
           document.getElementById("display_name").value
         );
         await logout();
-        redirect("/auth/login.html?registered=1");
+        const emulator = new URLSearchParams(location.search).get("emulator") === "1" ? "&emulator=1" : "";
+        redirect(`/auth/login.html?registered=1${emulator}`);
       } catch (err) {
         const code = err?.code || "";
         if (code === "auth/weak-password") {

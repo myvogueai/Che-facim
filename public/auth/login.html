@@ -40,7 +40,7 @@
   </div>
 
   <script type="module">
-    import { login, getUserProfile } from "../assets/auth.js";
+    import { login, getUserProfile, logout } from "../assets/auth.js";
     import { ensureUserProfile, updateLastLogin } from "../assets/users-data.js";
     import { guard, getPageConfig, getPostLoginRedirect, redirect, sanitizeReturnTo } from "../assets/router.js";
 
@@ -84,6 +84,8 @@
           document.getElementById("password").value
         );
 
+        await user.reload();
+
         let profile = await getUserProfile(true);
         if (!profile) {
           profile = await ensureUserProfile(user);
@@ -95,6 +97,7 @@
         }
 
         if (!user.emailVerified) {
+          await logout();
           mostraErrore("Verifica la tua email prima di accedere. Controlla la posta in arrivo.");
           return;
         }

@@ -1,8 +1,10 @@
 # ADR-001: Autenticazione e Ruoli
 
+> **ARCHIVIATO** — Questo documento non è più vincolante. Superseded da [ADR-002: App pubblica anonima + pannello admin autenticato](002-decisione-app-anonima-admin-only.md). La branch `cursor/auth-fase-1-fondamenta-2423` è stata chiusa senza merge.
+
 | Campo | Valore |
 |---|---|
-| **Stato** | Accettato |
+| **Stato** | Archiviato (superseded da ADR-002) |
 | **Data** | 2026-06-30 |
 | **Autori** | Software Architecture |
 | **Progetto** | Che facim'? |

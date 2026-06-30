@@ -1,7 +1,9 @@
 # Che facim'? — Setup
 
-Architettura: web app statica (HTML/CSS/JS puro, no framework) + Firebase
-(Firestore per i dati, Auth **solo per l'admin**). L'app pubblica è anonima.
+Architettura ufficiale: **app pubblica anonima + pannello admin autenticato** ([ADR-002](docs/archive/002-decisione-app-anonima-admin-only.md)).
+
+Web app statica (HTML/CSS/JS puro, no framework) + Firebase
+(Firestore per i dati, Auth **solo per l'admin**). L'app pubblica è anonima — nessun login utente, nessuna collection `users`.
 
 Riferimento completo: [ARCHITECTURE.md](ARCHITECTURE.md)
 
@@ -93,6 +95,7 @@ Se il CRUD admin fallisce con "permission denied", l'UID non è in whitelist e i
 
 ## Note operative
 
+- **Auth utente:** non prevista. Non esistono pagine `/auth/*` né moduli `auth.js` / `users-data.js` nell'app pubblica.
 - **Locandine**: URL diretto nel campo immagine (Imgur, Firebase Storage, ecc.)
 - **Contatti in About**: sostituisci `39XXXXXXXXXX` e `info@chefacim.it` in `about.html`
 - **Credenziali admin**: non condividere pubblicamente; protezione aggiuntiva = rules Firestore (non solo URL `/admin/`)

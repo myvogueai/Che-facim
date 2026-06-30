@@ -3,6 +3,8 @@
 Documento di riferimento per lo sviluppo e il deploy del progetto.
 Per istruzioni operative vedi [SETUP.md](SETUP.md).
 
+**Decisione ufficiale (2026-06-30):** app pubblica anonima + pannello admin autenticato. Dettaglio in [docs/archive/002-decisione-app-anonima-admin-only.md](docs/archive/002-decisione-app-anonima-admin-only.md). La branch `cursor/auth-fase-1-fondamenta-2423` (auth utente) è stata chiusa e eliminata senza merge.
+
 ---
 
 ## 1. Panoramica
@@ -195,8 +197,10 @@ Secret richiesto in GitHub: `FIREBASE_SERVICE_ACCOUNT`.
 | Cloud Functions | Non previsto |
 | Route guard sull'app pubblica | Non previsto |
 | Login unificato user/admin | Non previsto |
+| Branch `cursor/auth-fase-1-fondamenta-2423` | Chiusa e eliminata (2026-06-30), non mergeata |
 
-Documento storico con approccio diverso: `docs/archive/001-autenticazione-e-ruoli.md` (archiviato, non vincolante).
+Documenti storici con approccio diverso (auth utente): `docs/archive/001-*.md` (archiviati, non vincolanti).
+Decisione ufficiale: `docs/archive/002-decisione-app-anonima-admin-only.md`.
 
 ---
 
@@ -219,4 +223,5 @@ Ogni estensione che introduca auth utente richiede un nuovo ADR.
 | [README.md](README.md) | Overview e URL |
 | [SETUP.md](SETUP.md) | Setup Firebase passo-passo |
 | [firestore.rules](firestore.rules) | Regole sicurezza |
+| [docs/archive/002-decisione-app-anonima-admin-only.md](docs/archive/002-decisione-app-anonima-admin-only.md) | Decisione ufficiale architettura |
 | [docs/archive/](docs/archive/) | ADR e test plan storici |

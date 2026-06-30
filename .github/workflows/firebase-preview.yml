@@ -70,11 +70,19 @@ jobs:
       - name: Verify preview URL
         id: verify
         run: |
-          PREVIEW_URL="https://${{ env.CHANNEL_ID }}--che-facim.web.app"
+          PREVIEW_URL=$(npx firebase-tools@15.22.3 hosting:channel:list \
+            --project che-facim \
+            --json | node -e "
+              const data = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+              const channels = data.result?.channels || data.channels || [];
+              const match = channels.find((c) => (c.name || '').endsWith('/${{ env.CHANNEL_ID }}'));
+              if (!match?.url) process.exit(1);
+              console.log(match.url);
+            ")
           echo "url=${PREVIEW_URL}" >> "$GITHUB_OUTPUT"
           for i in 1 2 3 4 5; do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${PREVIEW_URL}/auth/login.html" || true)
-            echo "Tentativo $i: HTTP $STATUS"
+            echo "Tentativo $i: HTTP $STATUS su ${PREVIEW_URL}/auth/login.html"
             if [ "$STATUS" = "200" ]; then
               echo "ok=true" >> "$GITHUB_OUTPUT"
               exit 0

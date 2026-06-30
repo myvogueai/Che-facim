@@ -7,7 +7,7 @@ service cloud.firestore {
     // Aggiungere almeno un UID prima del deploy in produzione, oppure usare custom claim admin:true
     function adminUids() {
       return [
-        // 'INCOLLA_QUI_UID_ADMIN',
+        'DQ6XqekeRPOYeEgyFcxPPpqpDTo2', // admin@chefacim.it
       ];
     }
 

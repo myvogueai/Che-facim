@@ -194,6 +194,346 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   height: 100%;
 }
 
+.leaflet-container {
+  background: var(--superficie) !important;
+  font-family: var(--font-corpo);
+}
+
+.leaflet-control-attribution {
+  background: rgba(22, 19, 32, 0.75) !important;
+  color: var(--lavanda) !important;
+  font-size: 9px !important;
+}
+
+.leaflet-control-attribution a { color: var(--lavanda) !important; }
+
+.leaflet-control-zoom a {
+  background: var(--notte-alta) !important;
+  color: var(--pietra) !important;
+  border-color: var(--superficie-bordo) !important;
+}
+
+/* Marker unificato — solo il selezionato si anima */
+.pin-mappa {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--pietra);
+  border: 2.5px solid var(--notte);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  transition: transform 0.25s ease, background 0.2s ease;
+}
+
+.pin-mappa.selezionato {
+  background: var(--terracotta);
+  transform: scale(1.4);
+  animation: pin-selezionato-pulsa 1.6s ease-in-out infinite;
+}
+
+@keyframes pin-selezionato-pulsa {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(232, 83, 58, 0.35); }
+  50% { box-shadow: 0 0 0 9px rgba(232, 83, 58, 0.1); }
+}
+
+/* ============ PAGINA ESPLORA (mappa protagonista) ============ */
+body.pagina-esplora {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.app-header-compatto {
+  padding: 14px 20px 10px;
+  flex-shrink: 0;
+}
+
+.app-header-compatto h1 {
+  font-size: 22px;
+}
+
+.logo-app-piccolo {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+}
+
+body.pagina-esplora .giorni-scroll {
+  padding: 0 20px 10px;
+  flex-shrink: 0;
+}
+
+.filtri-bar-compatta {
+  padding: 0 20px 10px;
+  flex-shrink: 0;
+}
+
+.filtri-bar-compatta .filtri-bottone {
+  padding: 10px 16px;
+  font-size: 13.5px;
+}
+
+.filtri-sheet {
+  position: fixed;
+  inset: 0;
+  background: rgba(22, 19, 32, 0.55);
+  z-index: 80;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 16px calc(80px + env(safe-area-inset-bottom));
+}
+
+.filtri-sheet[hidden] {
+  display: none !important;
+  pointer-events: none !important;
+}
+
+.filtri-sheet-contenuto {
+  width: 100%;
+  max-width: 560px;
+  background: var(--notte-alta);
+  border-radius: 18px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: var(--ombra-card);
+}
+
+.filtro-opzione {
+  text-align: left;
+  padding: 13px 16px;
+  border-radius: 12px;
+  font-size: 14.5px;
+  color: var(--pietra);
+  transition: background 0.15s ease;
+}
+
+.filtro-opzione:hover,
+.filtro-opzione.attiva {
+  background: var(--superficie);
+}
+
+.filtro-opzione.attiva {
+  color: var(--terracotta);
+  font-weight: 600;
+}
+
+.esplora-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+}
+
+.mappa-area {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.mappa-area #mappa {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: auto;
+  z-index: 1;
+}
+
+.mappa-area .leaflet-container {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.mappa-area .leaflet-container:active {
+  cursor: grabbing;
+}
+
+.marker-esplora-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.leaflet-div-icon.marker-esplora-icon {
+  background: transparent;
+  border: none;
+}
+
+.mappa-area .cerca-zona-bottone {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--notte-alta);
+  color: var(--pietra);
+  padding: 10px 18px;
+  border-radius: var(--radius-pill);
+  font-size: 13.5px;
+  font-weight: 600;
+  box-shadow: var(--ombra-card);
+  z-index: 450;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.mappa-area .cerca-zona-bottone:active {
+  transform: translateX(-50%) scale(0.97);
+}
+
+.carosello-wrap {
+  flex-shrink: 0;
+  background: linear-gradient(to top, var(--notte) 85%, transparent);
+  padding: 8px 0 12px;
+  position: relative;
+  z-index: 55;
+  pointer-events: none;
+}
+
+.carosello-eventi {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  padding-block: 4px;
+  /* Permette di centrare anche la prima e l'ultima card */
+  padding-inline: max(20px, calc(50% - min(41vw, 150px)));
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  pointer-events: auto;
+  cursor: grab;
+}
+
+.carosello-eventi.carosello-trascinamento {
+  cursor: grabbing;
+  scroll-behavior: auto;
+  user-select: none;
+}
+
+.carosello-eventi.carosello-trascinamento .carosello-card {
+  cursor: grabbing;
+}
+
+.carosello-eventi::-webkit-scrollbar { display: none; }
+
+.carosello-card {
+  flex: 0 0 min(82vw, 300px);
+  scroll-snap-align: center;
+  border-radius: 16px;
+  background: var(--superficie);
+  overflow: hidden;
+  box-shadow: var(--ombra-card);
+  border: 2px solid transparent;
+  transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: pan-x;
+  -webkit-user-drag: none;
+}
+
+.carosello-card.attiva {
+  border-color: var(--terracotta);
+  transform: scale(1.02);
+  box-shadow: 0 6px 28px rgba(232, 83, 58, 0.2), var(--ombra-card);
+}
+
+.carosello-card-link {
+  display: flex;
+  height: 100%;
+  min-height: 118px;
+  touch-action: pan-x;
+}
+
+.carosello-locandina {
+  width: 96px;
+  flex-shrink: 0;
+  object-fit: cover;
+  background: var(--notte-alta);
+}
+
+.carosello-corpo {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 14px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.carosello-titolo {
+  font-family: var(--font-display);
+  font-size: 15px;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.carosello-sottotitolo {
+  font-size: 12px;
+  color: var(--lavanda);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.carosello-locale {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--terracotta);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.carosello-meta {
+  font-size: 12px;
+  color: var(--pietra-soft);
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.carosello-meta-sep {
+  margin: 0 4px;
+  opacity: 0.5;
+}
+
+.carosello-prezzo {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--lavanda);
+  margin-top: 2px;
+}
+
+.carosello-prezzo.gratis {
+  color: var(--verde-gratis);
+}
+
+.carosello-vuoto {
+  flex: 1;
+  min-width: 100%;
+  padding: 24px 20px;
+  text-align: center;
+  color: var(--lavanda);
+  font-size: 14px;
+}
+
+.carosello-loading p {
+  animation: pulse-testo 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-testo {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
 .bottone-mappa-flottante {
   position: fixed;
   bottom: 92px;
@@ -583,3 +923,163 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   background: var(--notte-alta);
 }
 .admin-lista-item .azioni button.elimina { color: var(--terracotta); }
+
+/* ============ LOCATION PICKER (ADMIN) ============ */
+.posizione-sezione {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  background: var(--notte-alta);
+  border-radius: 14px;
+  border: 1px solid var(--superficie-bordo);
+}
+
+.posizione-sezione-titolo {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pietra);
+  margin: 0;
+}
+
+.posizione-autocomplete {
+  position: relative;
+}
+
+.campo-civico {
+  flex: 0 0 130px;
+}
+
+@media (max-width: 520px) {
+  .campo-civico {
+    flex: 1;
+  }
+}
+
+.indirizzo-input-wrap {
+  position: relative;
+}
+
+.indirizzo-input-wrap input.indirizzo-input--caricamento {
+  padding-right: 42px;
+}
+
+.indirizzo-spinner {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  border: 2px solid var(--superficie-bordo);
+  border-top-color: var(--terracotta);
+  border-radius: 50%;
+  animation: indirizzo-spinner-giro 0.7s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes indirizzo-spinner-giro {
+  to { transform: rotate(360deg); }
+}
+
+.suggerimenti-lista {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 500;
+  margin: 0;
+  padding: 6px 0;
+  list-style: none;
+  background: var(--superficie);
+  border: 1px solid var(--superficie-bordo);
+  border-radius: 10px;
+  box-shadow: var(--ombra-card);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.suggerimento-item {
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--pietra);
+  cursor: pointer;
+  line-height: 1.35;
+}
+
+.suggerimento-item:hover,
+.suggerimento-item--attivo {
+  background: var(--notte-alta);
+}
+
+.suggerimento-item--caricamento,
+.suggerimento-item--vuoto {
+  color: var(--lavanda);
+  cursor: default;
+  font-size: 13px;
+}
+
+.posizione-mappa-riga {
+  display: flex;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.mini-mappa {
+  flex: 1;
+  min-width: 0;
+  height: 220px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--superficie-bordo);
+  background: var(--superficie);
+}
+
+.posizione-stato {
+  flex: 0 0 140px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 16px 12px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  gap: 6px;
+}
+
+.posizione-stato-icona {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.posizione-stato--vuoto {
+  background: var(--superficie);
+  color: var(--lavanda);
+  border: 1px dashed var(--superficie-bordo);
+}
+
+.posizione-stato--trovato {
+  background: rgba(76, 175, 120, 0.12);
+  color: #6ecf98;
+  border: 1px solid rgba(76, 175, 120, 0.35);
+}
+
+.posizione-stato--attenzione {
+  background: rgba(232, 160, 80, 0.12);
+  color: #e8a050;
+  border: 1px solid rgba(232, 160, 80, 0.35);
+}
+
+@media (max-width: 520px) {
+  .posizione-mappa-riga {
+    flex-direction: column;
+  }
+  .posizione-stato {
+    flex: none;
+    flex-direction: row;
+    padding: 12px 16px;
+  }
+}

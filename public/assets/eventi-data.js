@@ -39,6 +39,8 @@ export async function creaEvento(dati) {
     titolo: dati.titolo,
     sottotitolo: dati.sottotitolo || "",
     locale: dati.locale,
+    indirizzo: dati.indirizzo || "",
+    civico: dati.civico || "",
     comune: dati.comune,
     lat: Number(dati.lat),
     lng: Number(dati.lng),

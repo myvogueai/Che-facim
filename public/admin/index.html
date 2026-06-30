@@ -6,6 +6,8 @@
 <title>Admin — Che facim'?</title>
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/style.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 </head>
 <body>
 
@@ -60,30 +62,41 @@
       <input type="text" id="sottotitolo" placeholder="es. Orchestra spettacolo Pino Daniele" />
     </div>
 
-    <div class="campo-riga">
-      <div class="campo">
-        <label for="locale">Locale / Venue *</label>
-        <input type="text" id="locale" required placeholder="es. Piazza Plebiscito" />
-      </div>
-      <div class="campo">
-        <label for="comune">Comune *</label>
-        <input type="text" id="comune" required placeholder="es. Potenza" />
-      </div>
-    </div>
+    <section class="posizione-sezione" aria-labelledby="posizione-titolo">
+      <h2 class="posizione-sezione-titolo" id="posizione-titolo">Posizione del locale</h2>
 
-    <div class="campo-riga">
       <div class="campo">
-        <label for="lat">Latitudine *</label>
-        <input type="number" step="any" id="lat" required placeholder="40.6404" />
+        <label for="locale">Nome locale *</label>
+        <input type="text" id="locale" required placeholder="es. Teatro Verdi, Bar Centrale" />
       </div>
-      <div class="campo">
-        <label for="lng">Longitudine *</label>
-        <input type="number" step="any" id="lng" required placeholder="15.8056" />
+
+      <div class="campo posizione-autocomplete">
+        <label for="indirizzo">Via / indirizzo *</label>
+        <input type="text" id="indirizzo" required autocomplete="off" placeholder="Via del Basento, Potenza" role="combobox" aria-expanded="false" aria-controls="indirizzo-suggerimenti" />
+        <ul id="indirizzo-suggerimenti" class="suggerimenti-lista" role="listbox" hidden></ul>
       </div>
-    </div>
-    <p style="font-size:12px; color: var(--lavanda); margin-top:-8px;">
-      Suggerimento: cerca il locale su Google Maps, tasto destro sul punto → copia le coordinate.
-    </p>
+
+      <div class="campo-riga">
+        <div class="campo campo-civico">
+          <label for="civico">Numero civico</label>
+          <input type="text" id="civico" inputmode="numeric" autocomplete="off" placeholder="es. 11" />
+        </div>
+        <div class="campo">
+          <label for="comune">Comune *</label>
+          <input type="text" id="comune" required placeholder="Compilato automaticamente" />
+        </div>
+      </div>
+
+      <input type="hidden" id="lat" />
+      <input type="hidden" id="lng" />
+
+      <div class="posizione-mappa-riga">
+        <div id="mini-mappa" class="mini-mappa" aria-label="Anteprima posizione sulla mappa"></div>
+        <div id="posizione-stato" class="posizione-stato posizione-stato--vuoto" aria-live="polite">
+          <span class="posizione-stato-icona">⚠️</span> Inserisci un indirizzo per trovare la posizione
+        </div>
+      </div>
+    </section>
 
     <div class="campo-riga">
       <div class="campo">
@@ -149,6 +162,7 @@
 
   <script type="module">
     import { creaEvento, aggiornaEvento, eliminaEvento, getTuttiEventiAdmin } from '../assets/eventi-data.js';
+    import { LocationPicker } from '../assets/location/location-picker.js';
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const auth = getAuth();
@@ -197,6 +211,18 @@
     const bottoneSalva = document.getElementById('bottone-salva');
     const bottoneAnnulla = document.getElementById('bottone-annulla-modifica');
 
+    const locationPicker = new LocationPicker({
+      localeEl: document.getElementById('locale'),
+      indirizzoEl: document.getElementById('indirizzo'),
+      civicoEl: document.getElementById('civico'),
+      comuneEl: document.getElementById('comune'),
+      latEl: document.getElementById('lat'),
+      lngEl: document.getElementById('lng'),
+      suggerimentiEl: document.getElementById('indirizzo-suggerimenti'),
+      mappaEl: document.getElementById('mini-mappa'),
+      statoEl: document.getElementById('posizione-stato'),
+    });
+
     function mostraToast(msg, errore = false) {
       const t = document.createElement('div');
       t.className = 'toast' + (errore ? ' errore' : '');
@@ -213,6 +239,7 @@
         tabNuovo.style.color = '#fff';
         tabLista.style.background = 'var(--superficie)';
         tabLista.style.color = 'var(--lavanda)';
+        locationPicker.invalidateSize();
       } else {
         formEl.style.display = 'none';
         vistaListaEl.style.display = 'block';
@@ -230,6 +257,7 @@
       formEl.reset();
       document.getElementById('evento-id').value = '';
       document.getElementById('prezzo').value = 'Gratis';
+      locationPicker.reset();
       bottoneSalva.textContent = 'Pubblica evento';
       bottoneAnnulla.style.display = 'none';
     }
@@ -238,20 +266,31 @@
 
     formEl.addEventListener('submit', async (e) => {
       e.preventDefault();
+
+      const validazionePosizione = locationPicker.valida();
+      if (!validazionePosizione.valido) {
+        mostraToast(validazionePosizione.messaggio, true);
+        document.getElementById('indirizzo').focus();
+        return;
+      }
+
       bottoneSalva.disabled = true;
       bottoneSalva.textContent = 'Salvataggio…';
 
       const id = document.getElementById('evento-id').value;
       const dataVal = document.getElementById('data').value;
       const orarioVal = document.getElementById('orario').value;
+      const posizione = locationPicker.getDati();
 
       const dati = {
         titolo: document.getElementById('titolo').value.trim(),
         sottotitolo: document.getElementById('sottotitolo').value.trim(),
-        locale: document.getElementById('locale').value.trim(),
-        comune: document.getElementById('comune').value.trim(),
-        lat: document.getElementById('lat').value,
-        lng: document.getElementById('lng').value,
+        locale: posizione.locale,
+        indirizzo: posizione.indirizzo,
+        civico: posizione.civico,
+        comune: posizione.comune,
+        lat: posizione.lat,
+        lng: posizione.lng,
         dataIso: `${dataVal}T${orarioVal}:00`,
         orario: orarioVal,
         categoria: document.getElementById('categoria').value,
@@ -328,10 +367,14 @@
             document.getElementById('evento-id').value = ev.id;
             document.getElementById('titolo').value = ev.titolo || '';
             document.getElementById('sottotitolo').value = ev.sottotitolo || '';
-            document.getElementById('locale').value = ev.locale || '';
-            document.getElementById('comune').value = ev.comune || '';
-            document.getElementById('lat').value = ev.lat || '';
-            document.getElementById('lng').value = ev.lng || '';
+            locationPicker.caricaPosizione({
+              locale: ev.locale || '',
+              indirizzo: ev.indirizzo || (ev.locale && ev.comune ? `${ev.locale}, ${ev.comune}` : ''),
+              civico: ev.civico || '',
+              comune: ev.comune || '',
+              lat: ev.lat,
+              lng: ev.lng,
+            });
             document.getElementById('data').value = d.toISOString().slice(0,10);
             document.getElementById('orario').value = ev.orario || d.toTimeString().slice(0,5);
             document.getElementById('categoria').value = ev.categoria || 'altro';

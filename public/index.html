@@ -8,18 +8,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css" />
-<style>
-  #mappa-wrap { position: relative; }
-  .leaflet-container { background: var(--superficie) !important; }
-  .leaflet-control-attribution { background: rgba(22,19,32,0.7) !important; color: var(--lavanda) !important; font-size: 9px !important; }
-  .leaflet-control-attribution a { color: var(--lavanda) !important; }
-</style>
 </head>
-<body>
+<body class="pagina-esplora">
 
-  <header class="app-header">
+  <header class="app-header app-header-compatto">
     <div class="header-riga">
-      <img src="assets/img/logo-header.png" alt="Che facim'?" class="logo-app" />
+      <img src="assets/img/logo-header.png" alt="Che facim'?" class="logo-app logo-app-piccolo" />
       <div>
         <h1>Che facim'?</h1>
         <p class="sotto-titolo" id="contatore-eventi">Caricamento eventi…</p>
@@ -29,34 +23,36 @@
 
   <div class="giorni-scroll" id="giorni-scroll"></div>
 
-  <div class="filtri-bar">
-    <button class="filtri-bottone" id="bottone-filtra">
+  <div class="filtri-bar filtri-bar-compatta">
+    <button class="filtri-bottone" id="bottone-filtra" type="button">
       Filtra per categoria
+    </button>
+    <button class="filtri-chip-attiva" id="chip-filtro-attivo" type="button" hidden>
+      <span id="chip-filtro-testo"></span>
+      <span aria-hidden="true">×</span>
     </button>
   </div>
 
-  <div class="lista-eventi" id="lista-eventi">
-    <div class="skeleton-card"><div class="skel-img"></div><div class="skel-riga"></div><div class="skel-riga corta"></div></div>
-    <div class="skeleton-card"><div class="skel-img"></div><div class="skel-riga"></div><div class="skel-riga corta"></div></div>
+  <div class="filtri-sheet" id="filtri-sheet" hidden>
+    <div class="filtri-sheet-contenuto" id="filtri-sheet-opzioni"></div>
   </div>
 
-  <button class="bottone-mappa-flottante" id="bottone-apri-mappa">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 20l-6-3V4l6 3 6-3 6 3v13l-6-3-6 3z"/><path d="M9 7v13M15 4v13"/></svg>
-    Mappa
-  </button>
-
-  <div class="modal-mappa" id="modal-mappa">
-    <div class="modal-mappa-header">
-      <h2>Eventi sulla mappa</h2>
-      <button class="modal-mappa-chiudi" id="bottone-chiudi-mappa">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#faf6ee" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  <main class="esplora-main">
+    <div class="mappa-area">
+      <button class="cerca-zona-bottone" id="bottone-cerca-zona" type="button" hidden>
+        Cerca in questa zona
       </button>
-    </div>
-    <div class="modal-mappa-corpo">
-      <button class="cerca-zona-bottone" id="bottone-cerca-zona" style="display:none;">Cerca in questa zona</button>
       <div id="mappa"></div>
     </div>
-  </div>
+
+    <div class="carosello-wrap">
+      <div class="carosello-eventi" id="carosello-eventi">
+        <div class="carosello-vuoto carosello-loading">
+          <p>Caricamento eventi…</p>
+        </div>
+      </div>
+    </div>
+  </main>
 
   <nav class="nav-inferiore">
     <a class="nav-voce attiva" href="index.html">
@@ -80,26 +76,61 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script type="module">
     import { getEventiPerGiorno, CATEGORIE } from './assets/eventi-data.js';
+    import { MappaEsplora } from './assets/mappa-esplora.js';
 
-    // ---- Costruzione selettore giorni (oggi + prossimi 13 giorni) ----
     const NOMI_GIORNI = ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"];
     const contenitoreGiorni = document.getElementById('giorni-scroll');
+    const contatoreEl = document.getElementById('contatore-eventi');
+    const bottoneFiltra = document.getElementById('bottone-filtra');
+    const chipFiltroAttivo = document.getElementById('chip-filtro-attivo');
+    const chipFiltroTesto = document.getElementById('chip-filtro-testo');
+    const filtriSheet = document.getElementById('filtri-sheet');
+    const filtriSheetOpzioni = document.getElementById('filtri-sheet-opzioni');
+
     let giornoSelezionato = new Date();
-    giornoSelezionato.setHours(0,0,0,0);
+    giornoSelezionato.setHours(0, 0, 0, 0);
+    let categoriaAttiva = null;
 
     const giorni = [];
     for (let i = 0; i < 14; i++) {
       const g = new Date();
       g.setDate(g.getDate() + i);
-      g.setHours(0,0,0,0);
+      g.setHours(0, 0, 0, 0);
       giorni.push(g);
     }
+
+    function formattaOrario(ev) {
+      if (ev.orario) return ev.orario;
+      const d = ev.data?.toDate ? ev.data.toDate() : new Date(ev.data);
+      return d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function aggiornaContatore(n) {
+      if (n === 0) {
+        contatoreEl.textContent = 'Nessun evento sulla mappa';
+      } else {
+        contatoreEl.textContent = `${n} ${n === 1 ? 'evento sulla mappa' : 'eventi sulla mappa'}`;
+      }
+    }
+
+    const esplora = new MappaEsplora({
+      mappaEl: document.getElementById('mappa'),
+      caroselloEl: document.getElementById('carosello-eventi'),
+      cercaZonaBtn: document.getElementById('bottone-cerca-zona'),
+      formattaOrario,
+      onConteggio: aggiornaContatore,
+    });
+
+    esplora.init();
+
+    window.addEventListener('load', () => esplora.ridimensiona());
 
     function renderGiorni() {
       contenitoreGiorni.innerHTML = '';
       giorni.forEach(g => {
         const attivo = g.getTime() === giornoSelezionato.getTime();
         const pill = document.createElement('button');
+        pill.type = 'button';
         pill.className = 'giorno-pill' + (attivo ? ' attivo' : '');
         pill.innerHTML = `<span class="num">${g.getDate()}</span><span class="label">${NOMI_GIORNI[g.getDay()]}</span>`;
         pill.addEventListener('click', () => {
@@ -109,134 +140,75 @@
         });
         contenitoreGiorni.appendChild(pill);
       });
+
+      const attivoEl = contenitoreGiorni.querySelector('.giorno-pill.attivo');
+      attivoEl?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     }
     renderGiorni();
 
-    // ---- Modal mappa: Leaflet si inizializza solo alla prima apertura ----
-    const modalMappa = document.getElementById('modal-mappa');
-    const bottoneApriMappa = document.getElementById('bottone-apri-mappa');
-    const bottoneChiudiMappa = document.getElementById('bottone-chiudi-mappa');
-    const CENTRO_POTENZA = [40.6404, 15.8056];
+    function renderFiltriSheet() {
+      filtriSheetOpzioni.innerHTML = [
+        `<button type="button" class="filtro-opzione${!categoriaAttiva ? ' attiva' : ''}" data-cat="">Tutte le categorie</button>`,
+        ...CATEGORIE.map(c =>
+          `<button type="button" class="filtro-opzione${categoriaAttiva === c.id ? ' attiva' : ''}" data-cat="${c.id}">${c.label}</button>`
+        )
+      ].join('');
 
-    let mappa = null;
-    let marcatori = [];
-    let ultimiEventiCaricati = [];
-
-    function inizializzaMappaSeNecessario() {
-      if (mappa) return;
-      mappa = L.map('mappa', { zoomControl: false, attributionControl: true }).setView(CENTRO_POTENZA, 9);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '© OpenStreetMap, © CARTO', maxZoom: 19
-      }).addTo(mappa);
-    }
-
-    bottoneApriMappa.addEventListener('click', () => {
-      modalMappa.classList.add('aperta');
-      inizializzaMappaSeNecessario();
-      // Leaflet ha bisogno di ricalcolare le dimensioni dopo essere diventato visibile
-      setTimeout(() => {
-        mappa.invalidateSize();
-        disegnaMarcatori(ultimiEventiCaricati);
-        if (ultimiEventiCaricati.length > 0) {
-          const bounds = L.latLngBounds(ultimiEventiCaricati.filter(e => e.lat && e.lng).map(e => [e.lat, e.lng]));
-          if (bounds.isValid()) mappa.fitBounds(bounds, { padding: [40, 40], maxZoom: 12 });
-        }
-      }, 50);
-    });
-    bottoneChiudiMappa.addEventListener('click', () => modalMappa.classList.remove('aperta'));
-
-    function pinIcona(attivo) {
-      return L.divIcon({
-        className: '',
-        html: `<div class="pin-fuoco${attivo ? ' attivo' : ''}"></div>`,
-        iconSize: [18, 18],
-        iconAnchor: [9, 9]
+      filtriSheetOpzioni.querySelectorAll('.filtro-opzione').forEach(btn => {
+        btn.addEventListener('click', () => {
+          categoriaAttiva = btn.dataset.cat || null;
+          aggiornaChipFiltro();
+          filtriSheet.hidden = true;
+          esplora.impostaCategoria(categoriaAttiva);
+        });
       });
     }
 
-    function disegnaMarcatori(eventi) {
-      if (!mappa) return;
-      marcatori.forEach(m => mappa.removeLayer(m));
-      marcatori = [];
-      eventi.forEach(ev => {
-        if (!ev.lat || !ev.lng) return;
-        const marker = L.marker([ev.lat, ev.lng], { icon: pinIcona(false) })
-          .addTo(mappa)
-          .on('click', () => {
-            modalMappa.classList.remove('aperta');
-            const card = document.getElementById('card-' + ev.id);
-            if (card) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          });
-        marcatori.push(marker);
-      });
-    }
-
-    // ---- Caricamento e render eventi ----
-    const listaEl = document.getElementById('lista-eventi');
-    const contatoreEl = document.getElementById('contatore-eventi');
-
-    const ICONE_META = {
-      orologio: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
-      pin: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>',
-      euro: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 7a5 5 0 0 0-8 4 5 5 0 0 0 8 4M5 10h7M5 14h6"/></svg>'
-    };
-
-    const FRECCIA_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#faf6ee" stroke-width="2.4"><path d="M9 18l6-6-6-6"/></svg>';
-
-    function formattaOrario(ev) {
-      if (ev.orario) return ev.orario;
-      const d = ev.data?.toDate ? ev.data.toDate() : new Date(ev.data);
-      return d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-    }
-
-    function renderEventi(eventi) {
-      if (eventi.length === 0) {
-        listaEl.innerHTML = `<p class="stato-vuoto">Nessun evento trovato per questo giorno.<br>Prova a scorrere su un'altra data, o torna a controllare più tardi — la lista si riempie ogni settimana.</p>`;
-        contatoreEl.textContent = 'Nessun evento per oggi';
+    function aggiornaChipFiltro() {
+      if (!categoriaAttiva) {
+        chipFiltroAttivo.hidden = true;
         return;
       }
-      contatoreEl.textContent = `${eventi.length} ${eventi.length === 1 ? 'evento trovato' : 'eventi trovati'}`;
-      listaEl.innerHTML = eventi.map((ev, i) => {
-        const prezzoGratis = (ev.prezzo || '').toLowerCase().includes('gratis') || (ev.prezzo || '').toLowerCase().includes('gratuit');
-        return `
-        <a class="evento-card cat-${ev.categoria || 'altro'}${ev.in_evidenza ? ' in-evidenza' : ''}" id="card-${ev.id}" href="evento.html?id=${ev.id}" style="animation-delay:${i * 0.05}s">
-          ${ev.in_evidenza ? '<span class="badge-evidenza">In evidenza</span>' : ''}
-          <img class="locandina" src="${ev.immagine_url || 'assets/placeholder-evento.jpg'}" alt="" loading="lazy" />
-          <div class="corpo">
-            <div class="titolo-riga">
-              <div>
-                <div class="titolo">${ev.titolo}</div>
-                ${ev.sottotitolo ? `<div class="sottotitolo">${ev.sottotitolo}</div>` : ''}
-              </div>
-              <div class="freccia">${FRECCIA_SVG}</div>
-            </div>
-            <div class="locale">${ev.locale}</div>
-            <div class="meta-riga">
-              <span>${ICONE_META.orologio} ${formattaOrario(ev)}</span>
-              <span>${ICONE_META.pin} ${ev.comune}</span>
-            </div>
-            <div class="prezzo-riga${prezzoGratis ? ' gratis' : ''}">${ICONE_META.euro} ${ev.prezzo || 'Gratis'}</div>
-          </div>
-        </a>`;
-      }).join('');
+      const cat = CATEGORIE.find(c => c.id === categoriaAttiva);
+      chipFiltroTesto.textContent = cat?.label || categoriaAttiva;
+      chipFiltroAttivo.hidden = false;
     }
 
+    bottoneFiltra.addEventListener('click', () => {
+      renderFiltriSheet();
+      filtriSheet.hidden = !filtriSheet.hidden;
+    });
+
+    chipFiltroAttivo.addEventListener('click', () => {
+      categoriaAttiva = null;
+      aggiornaChipFiltro();
+      esplora.impostaCategoria(null);
+    });
+
+    filtriSheet.addEventListener('click', (e) => {
+      if (e.target === filtriSheet) filtriSheet.hidden = true;
+    });
+
     async function caricaEventi() {
-      listaEl.innerHTML = `
-        <div class="skeleton-card"><div class="skel-img"></div><div class="skel-riga"></div><div class="skel-riga corta"></div></div>
-        <div class="skeleton-card"><div class="skel-img"></div><div class="skel-riga"></div><div class="skel-riga corta"></div></div>`;
+      document.getElementById('carosello-eventi').innerHTML =
+        '<div class="carosello-vuoto carosello-loading"><p>Caricamento eventi…</p></div>';
+      contatoreEl.textContent = 'Caricamento eventi…';
+
       try {
         const eventi = await getEventiPerGiorno(giornoSelezionato);
-        ultimiEventiCaricati = eventi;
-        renderEventi(eventi);
-        if (mappa) disegnaMarcatori(eventi);
+        esplora.impostaEventi(eventi);
+        esplora.ridimensiona();
       } catch (err) {
         console.error(err);
-        listaEl.innerHTML = `<p class="stato-vuoto">Errore nel caricamento eventi.<br>Controlla la configurazione Firebase in assets/firebase-config.js</p>`;
+        contatoreEl.textContent = 'Errore nel caricamento';
+        document.getElementById('carosello-eventi').innerHTML =
+          '<div class="carosello-vuoto"><p>Errore nel caricamento eventi.</p></div>';
       }
     }
 
     caricaEventi();
+
+    window.addEventListener('resize', () => esplora.ridimensiona());
   </script>
 </body>
 </html>

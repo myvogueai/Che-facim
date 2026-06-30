@@ -39,10 +39,13 @@ jobs:
 
       - name: Deploy Hosting Preview Channel
         run: |
+          npx firebase-tools@15.22.3 hosting:channel:delete "${{ env.CHANNEL_ID }}" \
+            --project che-facim \
+            --force \
+            --non-interactive 2>/dev/null || true
           npx firebase-tools@15.22.3 hosting:channel:deploy "${{ env.CHANNEL_ID }}" \
             --project che-facim \
             --expires 7d \
-            --force \
             --non-interactive
 
       - name: Deploy Firestore rules

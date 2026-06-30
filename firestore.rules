@@ -3,36 +3,53 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    match /eventi/{eventoId} {
-      // Lettura pubblica: chiunque può vedere gli eventi.
-      allow read: if true;
+  // ---- Helper (ADR-001 Fase 1) ----
+  function isAuthenticated() {
+    return request.auth != null;
+  }
 
-      // Scrittura (creazione, modifica, eliminazione): solo da autenticati.
-      // ATTENZIONE: per ora questo permette a QUALSIASI utente autenticato
-      // di scrivere. Prima di condividere il link admin con altri,
-      // collega l'autenticazione Firebase (email/password) al pannello
-      // admin e qui sostituisci "if request.auth != null"
-      // con un controllo su una lista di admin (es. custom claims).
+  function isOwner(uid) {
+    return isAuthenticated() && request.auth.uid == uid;
+  }
+
+  function isAdmin() {
+    return isAuthenticated() && request.auth.token.admin == true;
+  }
+
+  // ---- Utenti (Fase 1) ----
+  match /users/{uid} {
+    allow read: if isOwner(uid) || isAdmin();
+
+    allow create: if isOwner(uid)
+      && request.resource.data.uid == uid
+      && request.resource.data.role == 'user'
+      && request.resource.data.email_verified == false
+      && request.resource.data.status == 'active'
+      && request.resource.data.onboarding_completed == false;
+
+    allow update: if isOwner(uid)
+      && request.resource.data.uid == resource.data.uid
+      && request.resource.data.role == resource.data.role
+      && request.resource.data.email_verified == resource.data.email_verified
+      && request.resource.data.status == resource.data.status
+      && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['display_name', 'preferences', 'onboarding_completed', 'last_login_at', 'updated_at']);
+
+    allow update: if isAdmin()
+      && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['role', 'status', 'updated_at']);
+
+    allow delete: if isAdmin();
+  }
+
+  match /users/{uid}/preferiti/{eventoId} {
+    allow read, write: if isOwner(uid);
+  }
+
+  // ---- Eventi (invariato fino a Fase 2/3) ----
+    match /eventi/{eventoId} {
+      allow read: if true;
       allow write: if request.auth != null;
     }
   }
 }
-
-/* ============================================
-   NOTA IMPORTANTE — STATO ATTUALE
-   ============================================
-   Il pannello admin (public/admin/index.html) al momento NON ha
-   un login. Significa che chiunque trovi l'URL /admin/ può scrivere
-   sul database, perché la regola sopra controlla "request.auth != null"
-   ma nessuno sta facendo login per ottenere quell'auth.
-
-   Prima di mettere online l'app, vanno fatte DUE cose insieme:
-   1. Aggiungere Firebase Authentication (email/password) alla
-      pagina admin, con un account che crei tu a mano dalla
-      Console Firebase.
-   2. Mantenere questa regola "if request.auth != null" (che già
-      blocca chi non ha fatto login).
-
-   Fino a quel momento, NON pubblicare l'URL del pannello admin
-   e tienilo solo per uso locale/test.
-   ============================================ */

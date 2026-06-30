@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       channel_id:
-        description: "Nome del preview channel (es. fase1-test)"
+        description: "Nome del preview channel (es. fase1-auth)"
         required: false
         default: "fase1-auth"
         type: string
@@ -19,6 +19,8 @@ on:
 
 permissions:
   contents: read
+  deployments: write
+  pull-requests: write
 
 jobs:
   preview:
@@ -32,17 +34,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Deploy Hosting Preview Channel
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: che-facim
+          channelId: ${{ env.CHANNEL_ID }}
+          expires: 7d
+
       - name: Authenticate with Google Cloud
+        if: env.DEPLOY_RULES == 'true'
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-
-      - name: Deploy Hosting Preview Channel
-        run: |
-          npx firebase-tools@15.22.3 hosting:channel:deploy "${{ env.CHANNEL_ID }}" \
-            --project che-facim \
-            --expires 7d \
-            --non-interactive
 
       - name: Deploy Firestore rules
         if: env.DEPLOY_RULES == 'true'

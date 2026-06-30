@@ -5,6 +5,7 @@
 import { app, db } from "./auth.js";
 export { app, db };
 import {
+  collection,
   addDoc,
   updateDoc,
   deleteDoc,

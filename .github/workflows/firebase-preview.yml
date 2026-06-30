@@ -42,6 +42,7 @@ jobs:
           npx firebase-tools@15.22.3 hosting:channel:deploy "${{ env.CHANNEL_ID }}" \
             --project che-facim \
             --expires 7d \
+            --force \
             --non-interactive
 
       - name: Deploy Firestore rules

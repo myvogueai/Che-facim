@@ -40,7 +40,6 @@ jobs:
       - name: Deploy Hosting Preview Channel
         run: |
           npx firebase-tools@15.22.3 hosting:channel:deploy "${{ env.CHANNEL_ID }}" \
-            --only hosting \
             --project che-facim \
             --expires 7d \
             --non-interactive

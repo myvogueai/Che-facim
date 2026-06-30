@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>I miei eventi — Che facim'?</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css" />
+<style>
+  .tabs { display:flex; background: var(--superficie); border-radius: 14px; margin: 0 20px 20px; padding: 4px; }
+  .tabs button { flex:1; padding: 12px; border-radius: 10px; font-weight: 700; font-size: 14px; color: var(--lavanda); }
+  .tabs button.attivo { background: var(--lavanda-debole); color: var(--pietra); }
+</style>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="header-riga">
+      <img src="assets/img/logo-header.png" alt="Che facim'?" class="logo-app" />
+      <h1>I miei eventi</h1>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button id="tab-futuri" class="attivo">FUTURI</button>
+    <button id="tab-passati">PASSATI</button>
+  </div>
+
+  <div class="lista-eventi" id="lista-miei-eventi"></div>
+
+  <nav class="nav-inferiore">
+    <a class="nav-voce" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      Esplora
+    </a>
+    <a class="nav-voce" href="preferiti.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+      Preferiti
+    </a>
+    <a class="nav-voce attiva" href="i-miei-eventi.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      I miei eventi
+    </a>
+    <a class="nav-voce" href="about.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      About
+    </a>
+  </nav>
+
+  <script type="module">
+    import { getPreferiti } from './assets/preferiti.js';
+
+    const tabFuturi = document.getElementById('tab-futuri');
+    const tabPassati = document.getElementById('tab-passati');
+    const el = document.getElementById('lista-miei-eventi');
+    const ora = Date.now() / 1000;
+
+    function render(modalita) {
+      const tutti = getPreferiti();
+      const filtrati = tutti.filter(ev => {
+        const secs = ev.data?.seconds || 0;
+        return modalita === 'futuri' ? secs >= ora : secs < ora;
+      }).sort((a, b) => (a.data?.seconds || 0) - (b.data?.seconds || 0));
+
+      if (filtrati.length === 0) {
+        el.innerHTML = `<p class="stato-vuoto">Oh no, il tuo calendario sembra vuoto!<br>Tieni traccia delle tue serate con un tap sul ❤️ nella pagina dell'evento che non vuoi perderti.</p>`;
+        return;
+      }
+      el.innerHTML = filtrati.map(ev => {
+        const d = ev.data?.seconds ? new Date(ev.data.seconds * 1000) : new Date();
+        return `
+        <a class="evento-card" href="evento.html?id=${ev.id}">
+          <img class="locandina" src="${ev.immagine_url || 'assets/placeholder-evento.jpg'}" alt="" loading="lazy" />
+          <div class="corpo">
+            <div class="titolo">${ev.titolo}</div>
+            <div class="meta-riga">
+              <span>📅 ${d.toLocaleDateString('it-IT', { day:'2-digit', month:'short' })}</span>
+              <span>📍 ${ev.comune || ''}</span>
+            </div>
+          </div>
+        </a>`;
+      }).join('');
+    }
+
+    tabFuturi.addEventListener('click', () => {
+      tabFuturi.classList.add('attivo'); tabPassati.classList.remove('attivo');
+      render('futuri');
+    });
+    tabPassati.addEventListener('click', () => {
+      tabPassati.classList.add('attivo'); tabFuturi.classList.remove('attivo');
+      render('passati');
+    });
+
+    render('futuri');
+  </script>
+</body>
+</html>

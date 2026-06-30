@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>About — Che facim'?</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css" />
+<style>
+  .box-about { background: var(--superficie); border-radius: 18px; margin: 0 20px 16px; padding: 22px 20px; }
+  .box-about h2 { font-family: var(--font-display); font-size: 19px; margin-bottom: 12px; display:flex; align-items:center; gap:10px; }
+  .box-about p { font-size: 14.5px; line-height: 1.6; color: var(--pietra-soft); margin-bottom: 10px; }
+  .link-evidenza { color: var(--terracotta); font-weight: 700; text-decoration: underline; }
+  .riga-contatto { display:flex; align-items:center; gap:10px; margin-top:14px; font-size: 14.5px; }
+  .riga-contatto a { color: var(--lavanda); text-decoration: underline; }
+  .etichetta-contatto { font-weight: 700; color: var(--pietra); margin-top: 16px; display:block; }
+</style>
+</head>
+<body>
+
+  <header class="app-header">
+    <div class="header-riga">
+      <img src="assets/img/logo-header.png" alt="Che facim'?" class="logo-app" />
+      <h1>About</h1>
+    </div>
+  </header>
+
+  <div class="box-about">
+    <h2>🐦 Chi siamo</h2>
+    <p>Che facim'? raccoglie ogni sera gli eventi della provincia di Potenza: sagre, concerti, locali, teatro. Un posto solo dove guardare prima di uscire, invece di scrollare dieci pagine social diverse.</p>
+  </div>
+
+  <div class="box-about">
+    <h2>✉️ Collabora con noi</h2>
+    <p>Vuoi spingere la visibilità del tuo evento al livello successivo? Vuoi attirare un pubblico più numeroso?</p>
+    <p>Dimenticati della pubblicità dispersiva sui social.</p>
+    <p><a href="mailto:info@chefacim.it" class="link-evidenza">Scopri i nostri servizi scrivendoci!</a></p>
+
+    <span class="etichetta-contatto">Per segnalare il tuo evento</span>
+    <div class="riga-contatto">
+      📱 <a href="https://wa.me/39XXXXXXXXXX" target="_blank">WhatsApp</a>
+    </div>
+
+    <span class="etichetta-contatto">Per promo e partnership</span>
+    <div class="riga-contatto">
+      ✉️ <a href="mailto:info@chefacim.it">info@chefacim.it</a>
+    </div>
+    <div class="riga-contatto">
+      📱 <a href="https://wa.me/39XXXXXXXXXX" target="_blank">WhatsApp</a>
+    </div>
+  </div>
+
+  <div class="box-about">
+    <h2>📄 Privacy, Cookie e CGU</h2>
+    <p>Visualizza le relative informative ai seguenti link:</p>
+    <div class="riga-contatto"><a href="privacy.html">Privacy</a></div>
+    <div class="riga-contatto"><a href="cookie.html">Cookie Policy</a></div>
+    <div class="riga-contatto"><a href="termini.html">Termini e Condizioni Generali</a></div>
+  </div>
+
+  <div style="height: 90px;"></div>
+
+  <nav class="nav-inferiore">
+    <a class="nav-voce" href="index.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      Esplora
+    </a>
+    <a class="nav-voce" href="preferiti.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+      Preferiti
+    </a>
+    <a class="nav-voce" href="i-miei-eventi.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      I miei eventi
+    </a>
+    <a class="nav-voce attiva" href="about.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      About
+    </a>
+  </nav>
+</body>
+</html>

@@ -652,6 +652,8 @@ export class MappaEsplora {
     const ev = this._eventiVisibili.find((e) => e.id === id);
     if (!ev) return;
 
+    if (this._ultimoPanId === id) return;
+
     this._ultimoPanId = id;
     const mappaAttiva = this._modalAperta && this.mappaModal ? this.mappaModal : this.mappa;
     if (!mappaAttiva) return;
@@ -708,16 +710,24 @@ export class MappaEsplora {
 
     clearTimeout(this._scrollEndTimer);
     this._scrollEndTimer = null;
-    this._scrollSyncLock = true;
+    clearTimeout(this._scrollUnlockTimer);
+    this._scrollUnlockTimer = null;
+
     const target =
       card.offsetLeft - (this.caroselloEl.clientWidth - card.offsetWidth) / 2;
+
+    if (!smooth) {
+      this.caroselloEl.scrollTo({ left: target, behavior: "auto" });
+      return;
+    }
+
+    this._scrollSyncLock = true;
     this.caroselloEl.scrollTo({
       left: target,
-      behavior: smooth ? "smooth" : "auto",
+      behavior: "smooth",
     });
 
     if (!this._hasScrollEnd) {
-      clearTimeout(this._scrollUnlockTimer);
       this._scrollUnlockTimer = setTimeout(() => {
         this._scrollSyncLock = false;
       }, 500);
@@ -745,17 +755,15 @@ export class MappaEsplora {
     if (this._scrollSyncLock) {
       this._scrollSyncLock = false;
       clearTimeout(this._scrollUnlockTimer);
+      this._scrollUnlockTimer = null;
       return;
     }
+    if (!this._modalAperta) return;
 
     const id = this._idCardCentrale();
     if (!id) return;
 
-    this._syncVisuale(id);
-
-    if (id !== this._ultimoPanId) {
-      this._centraMappaSuEvento(id);
-    }
+    this.seleziona(id, { centraMappa: true, scrollCarosello: false });
   }
 
   ridimensiona() {

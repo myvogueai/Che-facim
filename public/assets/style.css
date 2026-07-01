@@ -717,6 +717,16 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
   pointer-events: none;
 }
 
+.carosello-wrap-mappa {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  padding: 24px 0 max(14px, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--notte) 78%, rgba(15, 13, 20, 0.55) 92%, transparent);
+}
+
 .carosello-eventi {
   display: flex;
   gap: 12px;
@@ -725,7 +735,7 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
   scroll-behavior: smooth;
   padding-block: 4px;
   /* Permette di centrare anche la prima e l'ultima card */
-  padding-inline: max(20px, calc(50% - min(41vw, 150px)));
+  padding-inline: max(20px, calc(50% - min(44vw, 170px)));
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x;
@@ -746,99 +756,55 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
 
 .carosello-eventi::-webkit-scrollbar { display: none; }
 
-.carosello-card {
-  flex: 0 0 min(82vw, 300px);
+.carosello-card.evento-card-h {
+  flex: 0 0 min(88vw, 340px);
   scroll-snap-align: center;
-  border-radius: 16px;
-  background: var(--superficie);
-  overflow: hidden;
-  box-shadow: var(--ombra-card);
-  border: 2px solid transparent;
-  transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
   cursor: pointer;
   pointer-events: auto;
   touch-action: pan-x;
   -webkit-user-drag: none;
+  animation: none;
+  margin: 0;
 }
 
-.carosello-card.attiva {
-  border-color: var(--terracotta);
+.carosello-card.evento-card-h.attiva {
+  border-color: rgba(232, 83, 58, 0.65);
   transform: scale(1.02);
   box-shadow: 0 6px 28px rgba(232, 83, 58, 0.2), var(--ombra-card);
 }
 
-.carosello-card-link {
-  display: flex;
-  height: 100%;
-  min-height: 118px;
+.carosello-card-link.evento-card-h-link {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) 48px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0 10px 12px;
+  min-height: 128px;
   touch-action: pan-x;
 }
 
-.carosello-locandina {
-  width: 96px;
-  flex-shrink: 0;
-  object-fit: cover;
-  background: var(--notte-alta);
-}
-
-.carosello-corpo {
-  flex: 1;
-  min-width: 0;
-  padding: 12px 14px 12px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.carosello-titolo {
-  font-family: var(--font-display);
-  font-size: 15px;
-  line-height: 1.2;
-  display: -webkit-box;
+.carosello-card .evento-card-h-titolo {
+  font-size: 16px;
   -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
-.carosello-sottotitolo {
-  font-size: 12px;
-  color: var(--lavanda);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.carosello-card .evento-card-h-body {
+  padding: 12px 6px 12px 12px;
 }
 
-.carosello-locale {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--terracotta);
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+@media (min-width: 480px) {
+  .carosello-card.evento-card-h {
+    flex: 0 0 min(82vw, 360px);
+  }
 
-.carosello-meta {
-  font-size: 12px;
-  color: var(--pietra-soft);
-  margin-top: auto;
-  padding-top: 4px;
-}
+  .carosello-card-link.evento-card-h-link {
+    grid-template-columns: 92px minmax(0, 1fr) 52px;
+    min-height: 136px;
+  }
 
-.carosello-meta-sep {
-  margin: 0 4px;
-  opacity: 0.5;
-}
-
-.carosello-prezzo {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--lavanda);
-  margin-top: 2px;
-}
-
-.carosello-prezzo.gratis {
-  color: var(--verde-gratis);
+  .carosello-card .evento-card-h-titolo {
+    font-size: 17px;
+  }
 }
 
 .carosello-vuoto {
@@ -848,6 +814,7 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
   text-align: center;
   color: var(--lavanda);
   font-size: 14px;
+  pointer-events: auto;
 }
 
 .carosello-loading p {

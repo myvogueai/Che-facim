@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=3" />
+<link rel="stylesheet" href="assets/style.css?v=4" />
 </head>
 <body class="pagina-home">
 
@@ -67,6 +67,13 @@
         Cerca in questa zona
       </button>
       <div id="mappa-modal"></div>
+      <div class="carosello-wrap carosello-wrap-mappa">
+        <div class="carosello-eventi" id="carosello-mappa">
+          <div class="carosello-vuoto carosello-loading">
+            <p>Caricamento eventi…</p>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -92,7 +99,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script type="module">
     import { getEventiPerGiorno, CATEGORIE } from './assets/eventi-data.js';
-    import { MappaEsplora } from './assets/mappa-esplora.js?v=3';
+    import { MappaEsplora } from './assets/mappa-esplora.js?v=4';
 
     const NOMI_GIORNI = ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"];
     const contenitoreGiorni = document.getElementById('giorni-scroll');
@@ -136,6 +143,7 @@
       mappaEl: document.getElementById('mappa'),
       mappaModalEl: document.getElementById('mappa-modal'),
       listaEl: document.getElementById('lista-eventi'),
+      caroselloEl: document.getElementById('carosello-mappa'),
       cercaZonaBtn: document.getElementById('bottone-cerca-zona'),
       categorie: CATEGORIE,
       formattaOrario,
@@ -229,7 +237,9 @@
 
     async function caricaEventi() {
       const lista = document.getElementById('lista-eventi');
+      const carosello = document.getElementById('carosello-mappa');
       lista.innerHTML = '<div class="stato-vuoto stato-vuoto-loading"><p>Caricamento eventi…</p></div>';
+      carosello.innerHTML = '<div class="carosello-vuoto carosello-loading"><p>Caricamento eventi…</p></div>';
       contatoreEl.textContent = 'Caricamento eventi…';
 
       try {
@@ -240,6 +250,7 @@
         console.error(err);
         contatoreEl.textContent = 'Errore nel caricamento';
         lista.innerHTML = '<div class="stato-vuoto"><p>Errore nel caricamento eventi.</p></div>';
+        carosello.innerHTML = '<div class="carosello-vuoto"><p>Errore nel caricamento eventi.</p></div>';
       }
     }
 

@@ -1,10 +1,11 @@
 // mappa-esplora.js
-// Mappa + lista eventi sincronizzata (marker ↔ card).
+// Mappa + lista home + carosello modal sincronizzati (marker ↔ card).
 
 import { CATEGORIE } from "./eventi-data.js";
 
 const CENTRO_POTENZA = [40.6404, 15.8056];
 const ZOOM_DEFAULT = 10;
+const SOGLIA_DRAG_CAROSELLO = 8;
 
 const ICONE_CATEGORIA = {
   musica: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
@@ -34,6 +35,7 @@ export class MappaEsplora {
    * @param {HTMLElement} opts.listaEl
    * @param {HTMLButtonElement} opts.cercaZonaBtn
    * @param {HTMLElement} [opts.mappaModalEl]
+   * @param {HTMLElement} [opts.caroselloEl]
    * @param {Array<{id: string, label: string}>} [opts.categorie]
    * @param {(ev: object) => string} [opts.formattaOrario]
    * @param {(n: number) => void} [opts.onConteggio]
@@ -42,6 +44,7 @@ export class MappaEsplora {
     this.mappaEl = opts.mappaEl;
     this.mappaModalEl = opts.mappaModalEl || null;
     this.listaEl = opts.listaEl;
+    this.caroselloEl = opts.caroselloEl || null;
     this.cercaZonaBtn = opts.cercaZonaBtn;
     this.onConteggio = opts.onConteggio || (() => {});
 
@@ -65,6 +68,21 @@ export class MappaEsplora {
     this._mappaSpostata = false;
     this._muoviProgrammatico = false;
     this._modalAperta = false;
+    this._scrollSyncLock = false;
+    this._scrollEndTimer = null;
+    this._scrollUnlockTimer = null;
+    this._scrollRaf = 0;
+    this._ultimoPanId = null;
+    this._hasScrollEnd = "onscrollend" in window;
+    this._caroselloPointer = { moved: false };
+    this._caroselloDrag = {
+      active: false,
+      pointerId: null,
+      startX: 0,
+      startScrollLeft: 0,
+      moved: false,
+      isMouse: false,
+    };
 
     this._formattaOrario = opts.formattaOrario || ((ev) => ev.orario || "");
   }
@@ -108,13 +126,106 @@ export class MappaEsplora {
 
     this.listaEl.addEventListener("click", (e) => {
       const card = e.target.closest(".evento-card-h");
-      if (!card) return;
+      if (!card || card.closest(".carosello-eventi")) return;
       this.seleziona(card.dataset.id, { centraMappa: true, scrollLista: false });
     });
+
+    if (this.caroselloEl) {
+      this._bindCaroselloInterazioni();
+    }
 
     requestAnimationFrame(() => {
       this.mappa?.invalidateSize();
       requestAnimationFrame(() => this.mappa?.invalidateSize());
+    });
+  }
+
+  _bindCaroselloInterazioni() {
+    const el = this.caroselloEl;
+    if (!el) return;
+
+    el.addEventListener("scroll", () => this._onCaroselloScroll(), { passive: true });
+
+    if (this._hasScrollEnd) {
+      el.addEventListener("scrollend", () => this._onCaroselloScrollEnd(), { passive: true });
+    }
+
+    el.addEventListener("pointerdown", (e) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+
+      this._caroselloDrag = {
+        active: true,
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startScrollLeft: el.scrollLeft,
+        moved: false,
+        isMouse: e.pointerType === "mouse",
+      };
+
+      if (this._caroselloDrag.isMouse) {
+        el.setPointerCapture(e.pointerId);
+        el.classList.add("carosello-trascinamento");
+        el.style.scrollSnapType = "none";
+      }
+    });
+
+    el.addEventListener(
+      "pointermove",
+      (e) => {
+        const d = this._caroselloDrag;
+        if (!d.active || e.pointerId !== d.pointerId) return;
+
+        const dx = e.clientX - d.startX;
+        if (Math.abs(dx) > SOGLIA_DRAG_CAROSELLO) d.moved = true;
+
+        if (d.isMouse && d.moved) {
+          e.preventDefault();
+          el.scrollLeft = d.startScrollLeft - dx;
+        }
+      },
+      { passive: false }
+    );
+
+    const fineTrascinamento = (e) => {
+      const d = this._caroselloDrag;
+      if (!d.active || e.pointerId !== d.pointerId) return;
+
+      if (d.isMouse) {
+        el.releasePointerCapture(e.pointerId);
+        el.classList.remove("carosello-trascinamento");
+        el.style.scrollSnapType = "";
+      }
+
+      this._caroselloPointer = { moved: d.moved };
+      d.active = false;
+      d.pointerId = null;
+    };
+
+    el.addEventListener("pointerup", fineTrascinamento);
+    el.addEventListener("pointercancel", fineTrascinamento);
+
+    el.addEventListener("click", (e) => {
+      const card = e.target.closest(".carosello-card");
+      if (!card) return;
+
+      if (this._caroselloPointer.moved) {
+        e.preventDefault();
+        this._caroselloPointer.moved = false;
+        return;
+      }
+
+      const href = card.dataset.href;
+      if (href) {
+        window.location.href = href;
+      }
+    });
+
+    el.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      const card = e.target.closest(".carosello-card");
+      if (!card?.dataset.href) return;
+      e.preventDefault();
+      window.location.href = card.dataset.href;
     });
   }
 
@@ -156,6 +267,9 @@ export class MappaEsplora {
     }
 
     this._syncVistaModal();
+    if (this._idSelezionato) {
+      this._scrollAllaCardCarosello(this._idSelezionato, false);
+    }
     requestAnimationFrame(() => {
       this.mappaModal?.invalidateSize();
       this._syncVistaModal();
@@ -179,6 +293,7 @@ export class MappaEsplora {
     this._zonaConfermata = false;
     this._mappaSpostata = false;
     this._idSelezionato = null;
+    this._ultimoPanId = null;
     this.cercaZonaBtn.hidden = true;
     this._applicaFiltri();
     this._adattaVista();
@@ -220,16 +335,19 @@ export class MappaEsplora {
     this.onConteggio(this._eventiVisibili.length);
     this._renderMarkers();
     this._renderLista();
+    this._renderCarosello();
 
     if (this._eventiVisibili.length > 0) {
       const ancoraValido = this._eventiVisibili.some((e) => e.id === this._idSelezionato);
       const id = ancoraValido ? this._idSelezionato : this._eventiVisibili[0].id;
       this.seleziona(id, {
         centraMappa: !ancoraValido,
-        scrollLista: !ancoraValido,
+        scrollLista: !ancoraValido && !this._modalAperta,
+        scrollCarosello: !ancoraValido || this._modalAperta,
       });
     } else {
       this._idSelezionato = null;
+      this._ultimoPanId = null;
       this._aggiornaMarkerAttivi();
     }
   }
@@ -268,7 +386,11 @@ export class MappaEsplora {
         .addTo(this.mappa)
         .on("click", (e) => {
           L.DomEvent.stopPropagation(e);
-          this.seleziona(ev.id, { centraMappa: true, scrollLista: true });
+          this.seleziona(ev.id, {
+            centraMappa: true,
+            scrollLista: !this._modalAperta,
+            scrollCarosello: this._modalAperta,
+          });
         });
 
       this._markers.set(ev.id, { marker, markerModal: null, evento: ev });
@@ -281,7 +403,7 @@ export class MappaEsplora {
   _renderMarkersModal() {
     if (!this.mappaModal) return;
 
-    this._markers.forEach((entry, id) => {
+    this._markers.forEach((entry) => {
       if (entry.markerModal) {
         this.mappaModal.removeLayer(entry.markerModal);
         entry.markerModal = null;
@@ -298,7 +420,7 @@ export class MappaEsplora {
       })
         .addTo(this.mappaModal)
         .on("click", () => {
-          this.seleziona(ev.id, { centraMappa: true, scrollLista: true });
+          this.seleziona(ev.id, { centraMappa: true, scrollCarosello: true });
         });
 
       entry.markerModal = markerModal;
@@ -332,7 +454,28 @@ export class MappaEsplora {
       .join("");
   }
 
-  _htmlCard(ev) {
+  _renderCarosello() {
+    if (!this.caroselloEl) return;
+
+    if (this._eventiVisibili.length === 0) {
+      this.caroselloEl.innerHTML = `
+        <div class="carosello-vuoto">
+          <p>Nessun evento in questa zona per il giorno selezionato.</p>
+        </div>`;
+      return;
+    }
+
+    this.caroselloEl.innerHTML = this._eventiVisibili
+      .map((ev) => this._htmlCard(ev, { carousel: true }))
+      .join("");
+  }
+
+  /**
+   * @param {object} ev
+   * @param {{ carousel?: boolean }} [opts]
+   */
+  _htmlCard(ev, opts = {}) {
+    const { carousel = false } = opts;
     const cat = ev.categoria || "altro";
     const prezzoRaw = ev.prezzo || "Gratis";
     const gratis =
@@ -347,59 +490,69 @@ export class MappaEsplora {
     const icona = ICONE_CATEGORIA[cat] || ICONE_CATEGORIA.altro;
 
     const media = ev.immagine_url
-      ? `<img class="evento-card-h-img" src="${this._escape(ev.immagine_url)}" alt="" loading="lazy" />`
+      ? `<img class="evento-card-h-img" src="${this._escape(ev.immagine_url)}" alt="" loading="lazy"${carousel ? ' draggable="false"' : ""} />`
       : `<div class="evento-card-h-placeholder cat-${this._escape(cat)}">${icona}</div>`;
+
+    const contenuto = `
+      <div class="evento-card-h-media">${media}</div>
+      <div class="evento-card-h-body">
+        <div class="evento-card-h-testa">
+          <h3 class="evento-card-h-titolo">${this._escape(ev.titolo)}</h3>
+          <div class="evento-card-h-badge-riga">
+            <span class="evento-card-h-badge">${this._escape(labelCat)}</span>
+            ${ev.in_evidenza ? '<span class="evento-card-h-evidenza">In evidenza</span>' : ""}
+          </div>
+        </div>
+        <div class="evento-card-h-dettagli">
+          <span class="evento-card-h-orario">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            ${this._escape(orario)}
+          </span>
+          <span class="evento-card-h-luogo">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+            ${this._escape(comune)}
+          </span>
+        </div>
+        <div class="evento-card-h-footer">
+          <span class="evento-card-h-prezzo${gratis ? " gratis" : ""}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 7a5 5 0 0 0-8 4 5 5 0 0 0 8 4M5 10h7M5 14h6"/></svg>
+            ${this._escape(prezzoLabel)}
+          </span>
+        </div>
+      </div>
+      <span class="evento-card-h-azione" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 18l6-6-6-6"/></svg>
+      </span>`;
+
+    if (carousel) {
+      return `
+        <article class="carosello-card evento-card-h cat-${this._escape(cat)}${attivo}" data-id="${this._escape(ev.id)}" data-href="${href}" tabindex="0" aria-label="Apri ${this._escape(ev.titolo)}">
+          <div class="carosello-card-link evento-card-h-link">${contenuto}</div>
+        </article>`;
+    }
 
     return `
       <article class="evento-card-h cat-${this._escape(cat)}${attivo}" data-id="${this._escape(ev.id)}">
-        <a class="evento-card-h-link" href="${href}">
-          <div class="evento-card-h-media">${media}</div>
-          <div class="evento-card-h-body">
-            <div class="evento-card-h-testa">
-              <h3 class="evento-card-h-titolo">${this._escape(ev.titolo)}</h3>
-              <div class="evento-card-h-badge-riga">
-                <span class="evento-card-h-badge">${this._escape(labelCat)}</span>
-                ${ev.in_evidenza ? '<span class="evento-card-h-evidenza">In evidenza</span>' : ""}
-              </div>
-            </div>
-            <div class="evento-card-h-dettagli">
-              <span class="evento-card-h-orario">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-                ${this._escape(orario)}
-              </span>
-              <span class="evento-card-h-luogo">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
-                ${this._escape(comune)}
-              </span>
-            </div>
-            <div class="evento-card-h-footer">
-              <span class="evento-card-h-prezzo${gratis ? " gratis" : ""}">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 7a5 5 0 0 0-8 4 5 5 0 0 0 8 4M5 10h7M5 14h6"/></svg>
-                ${this._escape(prezzoLabel)}
-              </span>
-            </div>
-          </div>
-          <span class="evento-card-h-azione" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 18l6-6-6-6"/></svg>
-          </span>
-        </a>
+        <a class="evento-card-h-link" href="${href}">${contenuto}</a>
       </article>`;
   }
 
   /**
    * @param {string} id
-   * @param {{ centraMappa?: boolean, scrollLista?: boolean }} [opts]
+   * @param {{ centraMappa?: boolean, scrollLista?: boolean, scrollCarosello?: boolean }} [opts]
    */
   seleziona(id, opts = {}) {
-    const { centraMappa = false, scrollLista = false } = opts;
+    const { centraMappa = false, scrollLista = false, scrollCarosello = false } = opts;
     if (!this._eventiVisibili.some((e) => e.id === id)) return;
 
-    this._idSelezionato = id;
-    this._aggiornaMarkerAttivi();
-    this._aggiornaCardAttive();
+    this._syncVisuale(id);
 
     if (scrollLista) {
-      this._scrollAllaCard(id);
+      this._scrollAllaCardLista(id);
+    }
+
+    if (scrollCarosello) {
+      this._scrollAllaCardCarosello(id);
     }
 
     if (centraMappa) {
@@ -407,18 +560,61 @@ export class MappaEsplora {
     }
   }
 
+  /** @param {string} id */
+  _syncVisuale(id) {
+    if (this._idSelezionato === id) {
+      this._aggiornaCardAttive();
+      return;
+    }
+    this._idSelezionato = id;
+    this._aggiornaMarkerAttivi();
+    this._aggiornaCardAttive();
+  }
+
+  /** @returns {string|null} */
+  _idCardCentrale() {
+    if (!this.caroselloEl) return null;
+
+    const cards = this.caroselloEl.querySelectorAll(".carosello-card");
+    if (cards.length === 0) return null;
+
+    const centro = this.caroselloEl.scrollLeft + this.caroselloEl.clientWidth / 2;
+    let migliore = null;
+    let distMin = Infinity;
+
+    cards.forEach((card) => {
+      const cardCentro = card.offsetLeft + card.offsetWidth / 2;
+      const dist = Math.abs(centro - cardCentro);
+      if (dist < distMin) {
+        distMin = dist;
+        migliore = card.dataset.id;
+      }
+    });
+
+    return migliore;
+  }
+
   _centraMappaSuEvento(id) {
     const ev = this._eventiVisibili.find((e) => e.id === id);
-    if (!ev || !this.mappa) return;
+    if (!ev) return;
 
-    const zoom = Math.max(this.mappa.getZoom(), 11);
+    this._ultimoPanId = id;
+    const mappaAttiva = this._modalAperta && this.mappaModal ? this.mappaModal : this.mappa;
+    if (!mappaAttiva) return;
+
+    const zoom = Math.max(mappaAttiva.getZoom(), 11);
     this._muoviProgrammatico = true;
-    this.mappa.flyTo([ev.lat, ev.lng], zoom, {
+    mappaAttiva.flyTo([ev.lat, ev.lng], zoom, {
       duration: 0.55,
       easeLinearity: 0.25,
     });
 
-    if (this.mappaModal) {
+    if (this._modalAperta && this.mappaModal && this.mappa) {
+      this.mappa.flyTo([ev.lat, ev.lng], zoom, {
+        duration: 0.55,
+        easeLinearity: 0.25,
+      });
+    } else if (!this._modalAperta && this.mappaModal) {
       this.mappaModal.flyTo([ev.lat, ev.lng], zoom, {
         duration: 0.55,
         easeLinearity: 0.25,
@@ -428,15 +624,84 @@ export class MappaEsplora {
 
   _aggiornaCardAttive() {
     this.listaEl.querySelectorAll(".evento-card-h").forEach((card) => {
+      if (card.closest(".carosello-eventi")) return;
+      card.classList.toggle("attiva", card.dataset.id === this._idSelezionato);
+    });
+
+    this.caroselloEl?.querySelectorAll(".carosello-card").forEach((card) => {
       card.classList.toggle("attiva", card.dataset.id === this._idSelezionato);
     });
   }
 
-  _scrollAllaCard(id) {
+  _scrollAllaCardLista(id) {
     const card = this.listaEl.querySelector(
       `.evento-card-h[data-id="${CSS.escape(id)}"]`
     );
     card?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  /**
+   * @param {string} id
+   * @param {boolean} [smooth=true]
+   */
+  _scrollAllaCardCarosello(id, smooth = true) {
+    if (!this.caroselloEl) return;
+
+    const card = this.caroselloEl.querySelector(
+      `.carosello-card[data-id="${CSS.escape(id)}"]`
+    );
+    if (!card) return;
+
+    clearTimeout(this._scrollEndTimer);
+    this._scrollEndTimer = null;
+    this._scrollSyncLock = true;
+    const target =
+      card.offsetLeft - (this.caroselloEl.clientWidth - card.offsetWidth) / 2;
+    this.caroselloEl.scrollTo({
+      left: target,
+      behavior: smooth ? "smooth" : "auto",
+    });
+
+    if (!this._hasScrollEnd) {
+      clearTimeout(this._scrollUnlockTimer);
+      this._scrollUnlockTimer = setTimeout(() => {
+        this._scrollSyncLock = false;
+      }, 500);
+    }
+  }
+
+  _onCaroselloScroll() {
+    if (this._scrollSyncLock || !this._modalAperta) return;
+
+    if (!this._scrollRaf) {
+      this._scrollRaf = requestAnimationFrame(() => {
+        this._scrollRaf = 0;
+        const id = this._idCardCentrale();
+        if (id) this._syncVisuale(id);
+      });
+    }
+
+    if (!this._hasScrollEnd) {
+      clearTimeout(this._scrollEndTimer);
+      this._scrollEndTimer = setTimeout(() => this._onCaroselloScrollEnd(), 180);
+    }
+  }
+
+  _onCaroselloScrollEnd() {
+    if (this._scrollSyncLock) {
+      this._scrollSyncLock = false;
+      clearTimeout(this._scrollUnlockTimer);
+      return;
+    }
+
+    const id = this._idCardCentrale();
+    if (!id) return;
+
+    this._syncVisuale(id);
+
+    if (id !== this._ultimoPanId) {
+      this._centraMappaSuEvento(id);
+    }
   }
 
   ridimensiona() {

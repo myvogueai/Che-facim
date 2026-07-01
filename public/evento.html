@@ -24,6 +24,19 @@
   .descrizione-testo { font-size: 15px; line-height: 1.6; color: var(--pietra-soft); white-space: pre-line; }
   .contatti-box { background: var(--superficie); border-radius: 14px; padding: 16px; margin-top: 10px; }
   .contatti-box a { color: var(--terracotta); font-weight: 600; }
+  .blocco-luogo {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; min-height: 44px; margin: 0; padding: 4px 0;
+    border: none; background: none; text-align: left;
+    cursor: pointer; font: inherit; color: inherit;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .blocco-luogo:active { opacity: 0.72; }
+  .blocco-luogo-pin { flex-shrink: 0; display: flex; }
+  .blocco-luogo-testo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .blocco-luogo-riga1 { color: var(--terracotta); font-weight: 700; font-size: 15px; line-height: 1.3; }
+  .blocco-luogo-riga2 { color: var(--lavanda); font-size: 14px; line-height: 1.35; }
+  .blocco-luogo-freccia { flex-shrink: 0; display: flex; color: var(--pietra-soft); opacity: 0.75; }
 </style>
 </head>
 <body>
@@ -55,11 +68,18 @@
       <div class="voce" id="meta-prezzo"></div>
     </div>
 
-    <div class="voce" style="margin-bottom: 6px;">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--terracotta)" stroke-width="2"><path d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
-      <span id="el-locale" style="color: var(--terracotta); font-weight: 700;"></span>
-    </div>
-    <p id="el-comune" style="color: var(--lavanda); font-size: 14px;"></p>
+    <button type="button" class="blocco-luogo" id="blocco-luogo" hidden>
+      <span class="blocco-luogo-pin" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--terracotta)" stroke-width="2"><path d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+      </span>
+      <span class="blocco-luogo-testo">
+        <span class="blocco-luogo-riga1" id="el-luogo-riga1"></span>
+        <span class="blocco-luogo-riga2" id="el-luogo-riga2"></span>
+      </span>
+      <span class="blocco-luogo-freccia" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg>
+      </span>
+    </button>
 
     <div id="blocco-descrizione" style="display:none;">
       <p class="sezione-titolo">Descrizione</p>
@@ -97,6 +117,7 @@
     import { db } from './assets/eventi-data.js';
     import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { aggiungiPreferito, rimuoviPreferito, ePreferito } from './assets/preferiti.js';
+    import { parseInputIndirizzo } from './assets/location/indirizzo-parser.js';
 
     const params = new URLSearchParams(location.search);
     const id = params.get('id');
@@ -105,6 +126,91 @@
       musica: 'Musica live', sagra: 'Sagra / Festa paesana', nightlife: 'Discoteca / Nightlife',
       teatro: 'Teatro / Cultura', sport: 'Sport', altro: 'Evento'
     };
+
+    function estraiViaCivico(ev) {
+      const civicoExtra = (ev.civico || '').trim();
+      if (!ev.indirizzo) return '';
+      const parsed = parseInputIndirizzo(ev.indirizzo);
+      const via = parsed.via.trim();
+      if (!via) return '';
+      const civico = parsed.civico || civicoExtra || null;
+      return civico ? `${via} ${civico}` : via;
+    }
+
+    function testoBloccoLuogo(ev) {
+      const locale = (ev.locale || '').trim();
+      const comune = (ev.comune || '').trim();
+      const viaCivico = estraiViaCivico(ev);
+
+      if (locale) {
+        const riga2 = viaCivico && comune
+          ? `${viaCivico} · ${comune}`
+          : comune || viaCivico;
+        return { riga1: locale, riga2: riga2 === locale ? '' : riga2 };
+      }
+
+      if (viaCivico) {
+        return {
+          riga1: viaCivico,
+          riga2: comune && !viaCivico.includes(comune) ? comune : '',
+        };
+      }
+
+      return { riga1: comune, riga2: '' };
+    }
+
+    function apriInMappe(ev) {
+      const lat = Number(ev.lat);
+      const lng = Number(ev.lng);
+      const haCoord = Number.isFinite(lat) && Number.isFinite(lng);
+      const indirizzo = (ev.indirizzo || '').trim();
+      const locale = (ev.locale || '').trim();
+      const comune = (ev.comune || '').trim();
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+      let url;
+      if (haCoord) {
+        url = isIOS
+          ? `maps://?ll=${lat},${lng}`
+          : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+      } else if (indirizzo) {
+        const q = encodeURIComponent(indirizzo);
+        url = isIOS
+          ? `maps://?q=${q}`
+          : `https://www.google.com/maps/search/?api=1&query=${q}`;
+      } else {
+        const q = encodeURIComponent([locale, comune].filter(Boolean).join(', '));
+        url = isIOS
+          ? `maps://?q=${q}`
+          : `https://www.google.com/maps/search/?api=1&query=${q}`;
+      }
+
+      window.location.href = url;
+    }
+
+    function impostaBloccoLuogo(ev) {
+      const blocco = document.getElementById('blocco-luogo');
+      const { riga1, riga2 } = testoBloccoLuogo(ev);
+      if (!riga1) {
+        blocco.hidden = true;
+        return;
+      }
+
+      document.getElementById('el-luogo-riga1').textContent = riga1;
+      const elRiga2 = document.getElementById('el-luogo-riga2');
+      if (riga2) {
+        elRiga2.textContent = riga2;
+        elRiga2.hidden = false;
+      } else {
+        elRiga2.textContent = '';
+        elRiga2.hidden = true;
+      }
+
+      const label = [riga1, riga2].filter(Boolean).join(', ');
+      blocco.setAttribute('aria-label', `${label} — apri in mappe`);
+      blocco.hidden = false;
+      blocco.onclick = () => apriInMappe(ev);
+    }
 
     async function carica() {
       if (!id) { document.body.innerHTML = '<p class="stato-vuoto">Evento non trovato.</p>'; return; }
@@ -120,8 +226,7 @@
       document.getElementById('meta-data').innerHTML = `📅 ${d.toLocaleDateString('it-IT', { day:'2-digit', month:'long' })}`;
       document.getElementById('meta-orario').innerHTML = `🕐 ${ev.orario}`;
       document.getElementById('meta-prezzo').innerHTML = `💶 ${ev.prezzo || 'Gratis'}`;
-      document.getElementById('el-locale').textContent = ev.locale;
-      document.getElementById('el-comune').textContent = ev.comune;
+      impostaBloccoLuogo(ev);
 
       if (ev.descrizione) {
         document.getElementById('blocco-descrizione').style.display = 'block';

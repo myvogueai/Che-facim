@@ -114,6 +114,21 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 /* ============ SELETTORE GIORNI ============ */
+.giorni-barra {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.giorni-mese {
+  margin: 0;
+  padding: 0 20px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--lavanda);
+}
+
 .giorni-scroll {
   display: flex;
   gap: 10px;
@@ -330,6 +345,10 @@ body.pagina-home {
 
 body.pagina-home .app-header-compatto {
   padding-bottom: 6px;
+}
+
+body.pagina-home .giorni-mese {
+  padding-bottom: 10px;
 }
 
 body.pagina-home .giorni-scroll {
@@ -1123,10 +1142,22 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
 }
 
 /* ============ SCHEDA EVENTO (dettaglio) ============ */
+.dettaglio-hero-wrap {
+  background: var(--notte-alta);
+  width: 100%;
+  min-height: 220px;
+  max-height: min(56vh, 420px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .dettaglio-hero {
   width: 100%;
-  height: 280px;
-  object-fit: cover;
+  height: auto;
+  max-height: min(56vh, 420px);
+  object-fit: contain;
+  object-position: center;
 }
 
 .dettaglio-corpo {

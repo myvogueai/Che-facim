@@ -135,6 +135,8 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   overflow-x: auto;
   padding: 4px 20px 18px;
   scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
 }
 .giorni-scroll::-webkit-scrollbar { display: none; }
 
@@ -154,12 +156,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   border: none;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  scroll-snap-align: center;
   --focus: 0;
   transform: translateY(calc(var(--focus) * -2px)) scale(calc(1 + var(--focus) * 0.04));
   box-shadow: 0 calc(4px * var(--focus)) calc(18px * var(--focus)) rgba(232, 83, 58, calc(0.38 * var(--focus)));
   transition:
-    transform 220ms cubic-bezier(0.25, 0.1, 0.25, 1),
-    box-shadow 220ms cubic-bezier(0.25, 0.1, 0.25, 1);
+    transform 200ms cubic-bezier(0.25, 0.1, 0.25, 1),
+    box-shadow 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 .giorno-pill::before {
@@ -169,7 +172,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   border-radius: inherit;
   background: linear-gradient(145deg, var(--terracotta) 0%, var(--terracotta-scuro) 100%);
   opacity: var(--focus);
-  transition: opacity 220ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition: opacity 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
   z-index: 0;
 }
 
@@ -185,7 +188,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   position: relative;
   z-index: 1;
   color: color-mix(in srgb, var(--pietra) calc((1 - var(--focus)) * 100%), #fff calc(var(--focus) * 100%));
-  transition: color 220ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition: color 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 .giorno-pill .label {
   font-size: 10.5px;
@@ -194,7 +197,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   letter-spacing: 0.03em;
   position: relative;
   z-index: 1;
-  transition: color 220ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  transition: color 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
 .giorni-scroll.giorni-scroll-attivo .giorno-pill .num,
@@ -207,6 +210,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   display: flex;
   align-items: flex-end;
   gap: 8px;
+  scroll-snap-align: center;
 }
 
 .giorno-cambio-mese-segno {

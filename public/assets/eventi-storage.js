@@ -16,6 +16,9 @@ function storage() {
 }
 
 const MAX_BYTES = 5 * 1024 * 1024;
+const MAX_LATO = 1920;
+const UPLOAD_TIMEOUT_MS = 120_000;
+const COMPRESS_TIMEOUT_MS = 90_000;
 const TIPI_ACCETTATI = new Set(["image/jpeg", "image/png", "image/webp"]);
 const ESTENSIONI = {
   "image/jpeg": "jpg",
@@ -47,11 +50,43 @@ export function validaImmagineEvento(file) {
 }
 
 /**
- * Ridimensiona e comprime prima dell'upload.
- * @param {File} file
- * @returns {Promise<{ blob: Blob, contentType: string, ext: string }>}
+ * @template T
+ * @param {Promise<T>} promise
+ * @param {number} ms
+ * @param {string} message
  */
-export async function comprimiImmagineEvento(file) {
+function withTimeout(promise, ms, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
+}
+
+/**
+ * @param {File} file
+ * @returns {Promise<{ width: number, height: number, draw: (CanvasRenderingContext2D, number, number) => void, cleanup?: () => void }>}
+ */
+async function preparaSorgenteImmagine(file) {
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bitmap = await createImageBitmap(file, {
+        resizeWidth: MAX_LATO,
+        resizeHeight: MAX_LATO,
+        resizeQuality: "high",
+      });
+      return {
+        width: bitmap.width,
+        height: bitmap.height,
+        draw: (ctx, w, h) => ctx.drawImage(bitmap, 0, 0, w, h),
+        cleanup: () => bitmap.close(),
+      };
+    } catch {
+      // fallback sotto
+    }
+  }
+
   const url = URL.createObjectURL(file);
   try {
     const img = await new Promise((resolve, reject) => {
@@ -61,25 +96,53 @@ export async function comprimiImmagineEvento(file) {
       el.src = url;
     });
 
-    const maxLato = 1920;
+    const ratio = Math.min(1, MAX_LATO / Math.max(img.naturalWidth, img.naturalHeight));
+    const width = Math.max(1, Math.round(img.naturalWidth * ratio));
+    const height = Math.max(1, Math.round(img.naturalHeight * ratio));
+
+    return {
+      width,
+      height,
+      draw: (ctx, w, h) => ctx.drawImage(img, 0, 0, w, h),
+    };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/**
+ * Ridimensiona e comprime prima dell'upload.
+ * @param {File} file
+ * @returns {Promise<{ blob: Blob, contentType: string, ext: string }>}
+ */
+export async function comprimiImmagineEvento(file) {
+  return withTimeout(
+    comprimiImmagineEventoInner(file),
+    COMPRESS_TIMEOUT_MS,
+    "Compressione immagine troppo lenta. Prova con un file più piccolo."
+  );
+}
+
+/**
+ * @param {File} file
+ */
+async function comprimiImmagineEventoInner(file) {
+  const sorgente = await preparaSorgenteImmagine(file);
+  try {
     const qualita = 0.84;
-    let w = img.naturalWidth;
-    let h = img.naturalHeight;
+    let w = sorgente.width;
+    let h = sorgente.height;
 
     if (!w || !h) {
       throw new Error("Immagine non valida.");
     }
-
-    const ratio = Math.min(1, maxLato / Math.max(w, h));
-    w = Math.max(1, Math.round(w * ratio));
-    h = Math.max(1, Math.round(h * ratio));
 
     const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("Compressione non supportata dal browser.");
-    ctx.drawImage(img, 0, 0, w, h);
+    sorgente.draw(ctx, w, h);
 
     const preferWebp = file.type !== "image/png";
     const tentativi = preferWebp
@@ -113,7 +176,7 @@ export async function comprimiImmagineEvento(file) {
 
     return migliore;
   } finally {
-    URL.revokeObjectURL(url);
+    sorgente.cleanup?.();
   }
 }
 
@@ -161,23 +224,30 @@ export function estraiPathStorageDaUrl(url) {
 /**
  * @param {File} file
  * @param {string} eventoId
+ * @param {{ onPhase?: (fase: 'compressione'|'upload') => void }} [opts]
  * @returns {Promise<string>}
  */
-export async function caricaCopertinaEvento(file, eventoId) {
+export async function caricaCopertinaEvento(file, eventoId, opts = {}) {
   const validazione = validaImmagineEvento(file);
   if (!validazione.valido) {
     throw new Error(validazione.messaggio);
   }
 
+  opts.onPhase?.("compressione");
   const { blob, contentType, ext } = await comprimiImmagineEvento(file);
   const nome = `cover-${Date.now()}.${ext}`;
   const path = `eventi-covers/${eventoId}/${nome}`;
   const storageRef = ref(storage(), path);
 
-  await uploadBytes(storageRef, blob, {
-    contentType,
-    cacheControl: "public,max-age=31536000,immutable",
-  });
+  opts.onPhase?.("upload");
+  await withTimeout(
+    uploadBytes(storageRef, blob, {
+      contentType,
+      cacheControl: "public,max-age=31536000,immutable",
+    }),
+    UPLOAD_TIMEOUT_MS,
+    "Upload copertina scaduto. Controlla la connessione e riprova."
+  );
 
   return getDownloadURL(storageRef);
 }

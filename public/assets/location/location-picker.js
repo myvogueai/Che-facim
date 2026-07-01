@@ -11,6 +11,7 @@ import {
   haRicercaInCache,
   parseInputIndirizzo,
   formattaIndirizzoConCivico,
+  comuneAccetta,
 } from "./nominatim-geocoder.js";
 
 const DEBOUNCE_MS = 300;
@@ -274,7 +275,12 @@ export class LocationPicker {
 
     const parsed =
       this._ultimoInputParsed || parseInputIndirizzo(this.indirizzoEl.value);
-    const comune = risultato.comune || parsed.comune || this.comuneEl.value.trim();
+    const comuneUtente = this.comuneEl.value.trim();
+    const comune =
+      comuneUtente ||
+      (comuneAccetta(risultato.comune, parsed.comune) ? risultato.comune : null) ||
+      parsed.comune ||
+      risultato.comune;
     const via = risultato.via || parsed.via;
 
     if (parsed.civico && !this.civicoEl.value.trim()) {
@@ -286,8 +292,11 @@ export class LocationPicker {
     this._coordsVia = { lat: risultato.lat, lng: risultato.lng };
 
     this.indirizzoEl.value = via;
-    if (comune) {
+    if (comune && !comuneUtente) {
       this.comuneEl.value = comune;
+    } else if (comuneUtente) {
+      this.comuneEl.value = comuneUtente;
+      this._comuneCorrente = comuneUtente;
     }
 
     this._posizioneConfermata = true;
@@ -317,10 +326,10 @@ export class LocationPicker {
 
     try {
       const preciso = await geocodeConCivico(this._viaCorrente, civico, comune);
-      if (preciso?.haCivico) {
+      if (preciso) {
         this._impostaCoordinate(preciso.lat, preciso.lng);
         this._posizionaMarker(preciso.lat, preciso.lng, true);
-        this._aggiornaStato("trovato");
+        this._aggiornaStato(preciso.haCivico ? "trovato" : "attenzione", preciso.haCivico ? undefined : MSG_CIVICO_NON_TROVATO);
         return;
       }
     } catch (err) {

@@ -406,11 +406,14 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
 .evento-card-h {
   border-radius: 16px;
   background: var(--superficie);
-  border: 1px solid var(--superficie-bordo);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   overflow: hidden;
-  box-shadow: var(--ombra-card);
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(0, 0, 0, 0.2);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
   animation: entrata-card 0.4s ease backwards;
+  isolation: isolate;
 }
 
 .evento-card-h:nth-child(1) { animation-delay: 0.02s; }
@@ -430,41 +433,42 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
 
 .evento-card-h-link {
   display: grid;
-  grid-template-columns: 84px minmax(0, 1fr) 40px;
-  align-items: stretch;
-  min-height: 112px;
+  grid-template-columns: 80px minmax(0, 1fr) 48px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0 10px 12px;
+  min-height: 108px;
 }
 
-/* Colonna immagine — larghezza fissa, mai percentuale */
+/* Colonna immagine — larghezza fissa in px, mai percentuale */
 .evento-card-h-media {
-  width: 84px;
-  min-width: 84px;
-  max-width: 84px;
-  align-self: stretch;
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+  height: 108px;
+  border-radius: 12px;
   overflow: hidden;
   background: var(--notte-alta);
-  border-right: 1px solid var(--superficie-bordo);
+  flex-shrink: 0;
 }
 
-.evento-card-h.cat-musica .evento-card-h-media { box-shadow: inset 3px 0 0 var(--cat-musica); }
-.evento-card-h.cat-sagra .evento-card-h-media { box-shadow: inset 3px 0 0 var(--cat-sagra); }
-.evento-card-h.cat-nightlife .evento-card-h-media { box-shadow: inset 3px 0 0 var(--cat-nightlife); }
-.evento-card-h.cat-teatro .evento-card-h-media { box-shadow: inset 3px 0 0 var(--cat-teatro); }
-.evento-card-h.cat-sport .evento-card-h-media { box-shadow: inset 3px 0 0 var(--cat-sport); }
-.evento-card-h.cat-altro .evento-card-h-media { box-shadow: inset 3px 0 0 var(--cat-altro); }
+.evento-card-h.cat-musica .evento-card-h-media { box-shadow: inset 0 0 0 2px rgba(232, 83, 58, 0.35); }
+.evento-card-h.cat-sagra .evento-card-h-media { box-shadow: inset 0 0 0 2px rgba(232, 178, 58, 0.35); }
+.evento-card-h.cat-nightlife .evento-card-h-media { box-shadow: inset 0 0 0 2px rgba(168, 85, 199, 0.35); }
+.evento-card-h.cat-teatro .evento-card-h-media { box-shadow: inset 0 0 0 2px rgba(78, 168, 199, 0.35); }
+.evento-card-h.cat-sport .evento-card-h-media { box-shadow: inset 0 0 0 2px rgba(78, 168, 118, 0.35); }
+.evento-card-h.cat-altro .evento-card-h-media { box-shadow: inset 0 0 0 2px rgba(124, 118, 147, 0.35); }
 
 .evento-card-h-img {
-  width: 84px;
-  height: 100%;
-  min-height: 112px;
+  width: 80px;
+  height: 108px;
   object-fit: cover;
   display: block;
 }
 
 .evento-card-h-placeholder {
-  width: 84px;
-  height: 100%;
-  min-height: 112px;
+  width: 80px;
+  height: 108px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -472,9 +476,9 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
 }
 
 .evento-card-h-placeholder svg {
-  width: 22px;
-  height: 22px;
-  opacity: 0.35;
+  width: 20px;
+  height: 20px;
+  opacity: 0.3;
 }
 
 .evento-card-h-placeholder.cat-musica { color: var(--cat-musica); }
@@ -487,10 +491,11 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
 /* Colonna contenuto */
 .evento-card-h-body {
   min-width: 0;
-  padding: 12px 10px 10px 14px;
+  padding: 14px 6px 14px 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  justify-content: center;
 }
 
 .evento-card-h-testa {
@@ -501,8 +506,8 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
 
 .evento-card-h-titolo {
   font-family: var(--font-display);
-  font-size: 17px;
-  line-height: 1.2;
+  font-size: 18px;
+  line-height: 1.18;
   letter-spacing: -0.01em;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -595,48 +600,47 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
   color: var(--verde-gratis);
 }
 
-/* Colonna freccia — allineata verticalmente al centro della card */
+/* Colonna freccia — centrata verticalmente, separata dal contenuto */
 .evento-card-h-azione {
   display: flex;
   align-items: center;
   justify-content: center;
-  align-self: center;
-  padding-right: 10px;
+  width: 36px;
+  height: 36px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
   color: var(--lavanda);
-  opacity: 0.7;
-  transition: color 0.15s ease, opacity 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .evento-card-h:hover .evento-card-h-azione,
 .evento-card-h.attiva .evento-card-h-azione {
-  color: var(--terracotta);
-  opacity: 1;
+  background: var(--terracotta);
+  color: #fff;
 }
 
 @media (min-width: 480px) {
   .evento-card-h-link {
-    grid-template-columns: 96px minmax(0, 1fr) 44px;
-    min-height: 118px;
+    grid-template-columns: 92px minmax(0, 1fr) 52px;
+    min-height: 116px;
   }
 
   .evento-card-h-media {
-    width: 96px;
-    min-width: 96px;
-    max-width: 96px;
+    width: 92px;
+    min-width: 92px;
+    max-width: 92px;
+    height: 116px;
   }
 
-  .evento-card-h-img {
-    width: 96px;
-    min-height: 118px;
-  }
-
+  .evento-card-h-img,
   .evento-card-h-placeholder {
-    width: 96px;
-    min-height: 118px;
+    width: 92px;
+    height: 116px;
   }
 
   .evento-card-h-titolo {
-    font-size: 18px;
+    font-size: 19px;
   }
 }
 

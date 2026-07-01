@@ -67,7 +67,14 @@ export class LocationPicker {
 
     this._setupSpinner();
     this._bindEvents();
+    this._bindResize();
     this._aggiornaStato("vuoto");
+  }
+
+  _bindResize() {
+    const onResize = () => this.invalidateSize();
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
   }
 
   _setupSpinner() {
@@ -343,7 +350,10 @@ export class LocationPicker {
       maxZoom: 19,
     }).addTo(this.mappa);
 
-    requestAnimationFrame(() => this.mappa?.invalidateSize());
+    requestAnimationFrame(() => {
+      this.mappa?.invalidateSize();
+      requestAnimationFrame(() => this.mappa?.invalidateSize());
+    });
   }
 
   _posizionaMarker(lat, lng, centra = false) {

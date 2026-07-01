@@ -196,16 +196,6 @@
     const loginErrore = document.getElementById('login-errore');
     const bottoneLogin = document.getElementById('bottone-login');
 
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        vistaLogin.style.display = 'none';
-        vistaAdmin.style.display = 'block';
-      } else {
-        vistaLogin.style.display = 'block';
-        vistaAdmin.style.display = 'none';
-      }
-    });
-
     formLogin.addEventListener('submit', async (e) => {
       e.preventDefault();
       bottoneLogin.disabled = true;
@@ -355,6 +345,17 @@
       suggerimentiEl: document.getElementById('indirizzo-suggerimenti'),
       mappaEl: document.getElementById('mini-mappa'),
       statoEl: document.getElementById('posizione-stato'),
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        vistaLogin.style.display = 'none';
+        vistaAdmin.style.display = 'block';
+        requestAnimationFrame(() => locationPicker.invalidateSize());
+      } else {
+        vistaLogin.style.display = 'block';
+        vistaAdmin.style.display = 'none';
+      }
     });
 
     function mostraToast(msg, errore = false) {

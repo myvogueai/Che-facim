@@ -1381,7 +1381,9 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
 .mini-mappa {
   flex: 1;
   min-width: 0;
+  flex-shrink: 0;
   height: 220px;
+  min-height: 220px;
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--superficie-bordo);
@@ -1429,6 +1431,10 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
 @media (max-width: 520px) {
   .posizione-mappa-riga {
     flex-direction: column;
+  }
+  .mini-mappa {
+    flex: none;
+    width: 100%;
   }
   .posizione-stato {
     flex: none;

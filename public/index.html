@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=10" />
+<link rel="stylesheet" href="assets/style.css?v=11" />
 </head>
 <body class="pagina-home">
 
@@ -102,7 +102,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script type="module">
     import { getEventiPerGiorno, CATEGORIE } from './assets/eventi-data.js';
-    import { MappaEsplora } from './assets/mappa-esplora.js?v=5';
+    import { MappaEsplora } from './assets/mappa-esplora.js?v=6';
 
     const NOMI_GIORNI = ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"];
     const NOMI_MESI = [
@@ -174,11 +174,21 @@
     }
 
     function aggiornaContatore(n) {
-      if (n === 0) {
+      const filtroAttivo = esplora.getCategoriaFiltro();
+      const totGiorno = esplora.getEventiGiornoCount();
+      if (n === 0 && filtroAttivo && totGiorno > 0) {
+        contatoreEl.textContent = 'Nessun evento per il filtro selezionato';
+      } else if (n === 0) {
         contatoreEl.textContent = 'Nessun evento per questo giorno';
       } else {
         contatoreEl.textContent = `${n} ${n === 1 ? 'evento' : 'eventi'} in programma`;
       }
+    }
+
+    function azzeraFiltroCategoria() {
+      categoriaAttiva = null;
+      aggiornaChipFiltro();
+      esplora.impostaCategoria(null);
     }
 
     const esplora = new MappaEsplora({
@@ -190,6 +200,7 @@
       categorie: CATEGORIE,
       formattaOrario,
       onConteggio: aggiornaContatore,
+      onRimuoviFiltroCategoria: azzeraFiltroCategoria,
     });
 
     esplora.init();
@@ -232,14 +243,21 @@
     }, 60_000);
 
     function renderFiltriSheet() {
+      const categoriePresenti = esplora.getCategoriePresenti();
+      if (categoriePresenti.length === 0) {
+        filtriSheetOpzioni.innerHTML =
+          '<p class="filtro-opzione filtro-opzione--vuoto">Nessuna categoria disponibile per questo giorno.</p>';
+        return;
+      }
+
       filtriSheetOpzioni.innerHTML = [
         `<button type="button" class="filtro-opzione${!categoriaAttiva ? ' attiva' : ''}" data-cat="">Tutte le categorie</button>`,
-        ...CATEGORIE.map(c =>
+        ...categoriePresenti.map(c =>
           `<button type="button" class="filtro-opzione${categoriaAttiva === c.id ? ' attiva' : ''}" data-cat="${c.id}">${c.label}</button>`
         )
       ].join('');
 
-      filtriSheetOpzioni.querySelectorAll('.filtro-opzione').forEach(btn => {
+      filtriSheetOpzioni.querySelectorAll('.filtro-opzione[data-cat]').forEach(btn => {
         btn.addEventListener('click', () => {
           categoriaAttiva = btn.dataset.cat || null;
           aggiornaChipFiltro();
@@ -265,9 +283,7 @@
     });
 
     chipFiltroAttivo.addEventListener('click', () => {
-      categoriaAttiva = null;
-      aggiornaChipFiltro();
-      esplora.impostaCategoria(null);
+      azzeraFiltroCategoria();
     });
 
     filtriSheet.addEventListener('click', (e) => {

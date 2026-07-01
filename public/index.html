@@ -142,6 +142,7 @@
     let timerFineScroll = null;
     let scrollRafFocus = 0;
     let scrollProgrammatico = false;
+    let bloccoSelezioneScroll = false;
 
     function oggiMezzanotte() {
       const d = new Date();
@@ -200,17 +201,13 @@
       const chiave = `${oggi.getFullYear()}-${oggi.getMonth()}-${oggi.getDate()}`;
       const cambiato = chiave !== chiaveCalendarioBarra;
       if (cambiato) {
-        const ieri = clonaGiorno(oggi);
-        ieri.setDate(ieri.getDate() - 1);
-        if (giornoSelezionato.getTime() === ieri.getTime()) {
-          giornoSelezionato = clonaGiorno(oggi);
-        }
+        giornoSelezionato = clonaGiorno(oggi);
         chiaveCalendarioBarra = chiave;
+        ultimoTsCaricato = null;
 
         if (!giorni.length) {
           inizializzaCarosello(giornoSelezionato);
         } else if (!giorni.some((g) => g.getTime() === giornoSelezionato.getTime())) {
-          giornoSelezionato = clonaGiorno(oggi);
           inizializzaCarosello(giornoSelezionato);
         } else {
           if (oggi < giornoInizio) {
@@ -222,6 +219,15 @@
       }
       aggiornaEtichettaMese(giornoSelezionato);
       return cambiato;
+    }
+
+    function resetSelezioneAlOggi() {
+      giornoSelezionato = oggiMezzanotte();
+      chiaveCalendarioBarra = `${giornoSelezionato.getFullYear()}-${giornoSelezionato.getMonth()}-${giornoSelezionato.getDate()}`;
+      ultimoTsCaricato = null;
+      inizializzaCarosello(giornoSelezionato);
+      renderGiorni({ scrollAttivo: true, scrollIstantaneo: true });
+      caricaEventi();
     }
 
     function formattaOrario(ev) {
@@ -347,6 +353,7 @@
     }
 
     function finalizzaScrollCarosello() {
+      if (bloccoSelezioneScroll) return;
       clearTimeout(timerFineScroll);
       contenitoreGiorni.classList.remove('giorni-scroll-attivo');
 
@@ -367,22 +374,37 @@
       schedulaCaricaEventi(ts);
     }
 
-    function scrollGiornoAttivo() {
+    function scrollGiornoAttivo({ istantaneo = false } = {}) {
       const pill = contenitoreGiorni.querySelector(`.giorno-pill[data-ts="${giornoSelezionato.getTime()}"]`);
       if (!pill) return;
       scrollProgrammatico = true;
-      pill.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
-      requestAnimationFrame(() => aggiornaFocusPillScroll());
+      if (istantaneo) bloccoSelezioneScroll = true;
+      pill.scrollIntoView({
+        inline: 'center',
+        block: 'nearest',
+        behavior: istantaneo ? 'instant' : 'smooth',
+      });
+      if (istantaneo) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            aggiornaFocusPillScroll();
+            scrollProgrammatico = false;
+            bloccoSelezioneScroll = false;
+          });
+        });
+      } else {
+        requestAnimationFrame(() => aggiornaFocusPillScroll());
+      }
     }
 
-    function renderGiorni({ scrollAttivo = true } = {}) {
+    function renderGiorni({ scrollAttivo = true, scrollIstantaneo = false } = {}) {
       assicuraGiorniAggiornati();
       if (!giorni.length) inizializzaCarosello(giornoSelezionato);
       contenitoreGiorni.innerHTML = '';
       giorni.forEach((g, i) => {
         contenitoreGiorni.appendChild(creaNodoGiorno(g, i > 0 ? giorni[i - 1] : null));
       });
-      if (scrollAttivo) scrollGiornoAttivo();
+      if (scrollAttivo) scrollGiornoAttivo({ istantaneo: scrollIstantaneo });
       else requestAnimationFrame(() => aggiornaFocusPillScroll());
     }
 
@@ -531,23 +553,24 @@
       });
     }
 
-    inizializzaCarosello(giornoSelezionato);
-    assicuraGiorniAggiornati();
-    renderGiorni();
-    requestAnimationFrame(() => aggiornaFocusPillScroll());
+    resetSelezioneAlOggi();
 
     contenitoreGiorni.addEventListener('scroll', gestisciScrollCarosello, { passive: true });
     contenitoreGiorni.addEventListener('scrollend', finalizzaScrollCarosello, { passive: true });
 
+    window.addEventListener('pageshow', (e) => {
+      if (e.persisted) resetSelezioneAlOggi();
+    });
+
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && assicuraGiorniAggiornati()) {
-        renderGiorni();
+        renderGiorni({ scrollAttivo: true, scrollIstantaneo: true });
         caricaEventi();
       }
     });
     setInterval(() => {
       if (assicuraGiorniAggiornati()) {
-        renderGiorni();
+        renderGiorni({ scrollAttivo: true, scrollIstantaneo: true });
         caricaEventi();
       }
     }, 60_000);
@@ -636,8 +659,6 @@
         carosello.innerHTML = '<div class="carosello-vuoto"><p>Errore nel caricamento eventi.</p></div>';
       }
     }
-
-    caricaEventi();
 
     window.addEventListener('resize', () => {
       esplora.ridimensiona();

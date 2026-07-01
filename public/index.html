@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=14" />
+<link rel="stylesheet" href="assets/style.css?v=15" />
 </head>
 <body class="pagina-home">
 
@@ -135,15 +135,13 @@
     const GIORNI_ESTENSIONE = 60;
     const SOGLIA_BORDO_SCROLL = 140;
     const GIORNI_MAX_IN_DOM = 280;
-    const SOGLIA_FOCUS_SELEZIONE = 0.72;
-    const SOGLIA_FOCUS_CARICA = 0.88;
-    const DEBOUNCE_CARICA_MS = 200;
-    const RITARDO_FINE_SCROLL_MS = 130;
+    const RITARDO_FINE_SCROLL_MS = 350;
+    const SUPPORTO_SCROLL_END = 'onscrollend' in window;
 
     let ultimoTsCaricato = null;
-    let timerCaricaEventi = null;
     let timerFineScroll = null;
     let scrollRafFocus = 0;
+    let scrollProgrammatico = false;
 
     function oggiMezzanotte() {
       const d = new Date();
@@ -275,11 +273,11 @@
       pill.innerHTML = `<span class="num">${g.getDate()}</span><span class="label">${NOMI_GIORNI[g.getDay()]}</span>`;
       pill.addEventListener('click', () => {
         giornoSelezionato = clonaGiorno(g);
-        ultimoTsCaricato = giornoSelezionato.getTime();
         aggiornaEtichettaMese(giornoSelezionato);
+        scrollProgrammatico = true;
         pill.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
         requestAnimationFrame(() => aggiornaFocusPillScroll());
-        caricaEventi();
+        schedulaCaricaEventi(giornoSelezionato.getTime());
       });
       return pill;
     }
@@ -343,35 +341,37 @@
     }
 
     function schedulaCaricaEventi(ts) {
-      clearTimeout(timerCaricaEventi);
-      timerCaricaEventi = setTimeout(() => {
-        if (giornoSelezionato.getTime() === ts && ultimoTsCaricato !== ts) {
-          ultimoTsCaricato = ts;
-          caricaEventi();
-        }
-      }, DEBOUNCE_CARICA_MS);
+      if (ultimoTsCaricato === ts) return;
+      ultimoTsCaricato = ts;
+      caricaEventi();
     }
 
-    function impegnaSelezioneDaCentro(forzaCarica = false) {
-      const { migliore, maxFocus } = aggiornaFocusPillScroll();
-      if (!migliore || maxFocus < SOGLIA_FOCUS_SELEZIONE) return;
+    function finalizzaScrollCarosello() {
+      clearTimeout(timerFineScroll);
+      contenitoreGiorni.classList.remove('giorni-scroll-attivo');
+
+      if (scrollProgrammatico) {
+        scrollProgrammatico = false;
+        aggiornaFocusPillScroll();
+        return;
+      }
+
+      const { migliore } = aggiornaFocusPillScroll();
+      if (!migliore) return;
 
       const ts = Number(migliore.dataset.ts);
-      const cambiato = ts !== giornoSelezionato.getTime();
+      if (ts === giornoSelezionato.getTime()) return;
 
-      if (cambiato) {
-        giornoSelezionato = clonaGiorno(new Date(ts));
-        aggiornaEtichettaMese(giornoSelezionato);
-      }
-
-      if (forzaCarica || maxFocus >= SOGLIA_FOCUS_CARICA) {
-        schedulaCaricaEventi(ts);
-      }
+      giornoSelezionato = clonaGiorno(new Date(ts));
+      aggiornaEtichettaMese(giornoSelezionato);
+      schedulaCaricaEventi(ts);
     }
 
     function scrollGiornoAttivo() {
       const pill = contenitoreGiorni.querySelector(`.giorno-pill[data-ts="${giornoSelezionato.getTime()}"]`);
-      pill?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+      if (!pill) return;
+      scrollProgrammatico = true;
+      pill.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
       requestAnimationFrame(() => aggiornaFocusPillScroll());
     }
 
@@ -502,15 +502,15 @@
     function gestisciScrollCarosello() {
       contenitoreGiorni.classList.add('giorni-scroll-attivo');
       clearTimeout(timerFineScroll);
-      timerFineScroll = setTimeout(() => {
-        contenitoreGiorni.classList.remove('giorni-scroll-attivo');
-        impegnaSelezioneDaCentro(true);
-      }, RITARDO_FINE_SCROLL_MS);
+      timerFineScroll = setTimeout(
+        finalizzaScrollCarosello,
+        SUPPORTO_SCROLL_END ? 600 : RITARDO_FINE_SCROLL_MS
+      );
 
       if (scrollRafFocus) return;
       scrollRafFocus = requestAnimationFrame(() => {
         scrollRafFocus = 0;
-        impegnaSelezioneDaCentro(false);
+        aggiornaFocusPillScroll();
       });
 
       if (scrollRaf) return;
@@ -537,6 +537,7 @@
     requestAnimationFrame(() => aggiornaFocusPillScroll());
 
     contenitoreGiorni.addEventListener('scroll', gestisciScrollCarosello, { passive: true });
+    contenitoreGiorni.addEventListener('scrollend', finalizzaScrollCarosello, { passive: true });
 
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden && assicuraGiorniAggiornati()) {

@@ -1,9 +1,19 @@
 // mappa-esplora.js
-// Mappa protagonista + carosello sincronizzato (marker ↔ card).
+// Mappa + lista eventi sincronizzata (marker ↔ card).
+
+import { CATEGORIE } from "./eventi-data.js";
 
 const CENTRO_POTENZA = [40.6404, 15.8056];
 const ZOOM_DEFAULT = 10;
-const SOGLIA_DRAG_CAROSELLO = 8;
+
+const ICONE_CATEGORIA = {
+  musica: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+  sagra: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l2.5 7.5H22l-6 4.5 2.5 7.5L12 18l-6.5 4.5 2.5-7.5-6-4.5h7.5z"/></svg>',
+  nightlife: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
+  teatro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19h16M6 15v4M18 15v4M8 11h8l2 8H6l2-8zM12 3l3 8H9l3-8z"/></svg>',
+  sport: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18M3 12h18"/></svg>',
+  altro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M8 9h8M8 13h5"/></svg>',
+};
 
 /**
  * @param {boolean} selezionato
@@ -21,19 +31,30 @@ export class MappaEsplora {
   /**
    * @param {Object} opts
    * @param {HTMLElement} opts.mappaEl
-   * @param {HTMLElement} opts.caroselloEl
+   * @param {HTMLElement} opts.listaEl
    * @param {HTMLButtonElement} opts.cercaZonaBtn
+   * @param {HTMLElement} [opts.mappaModalEl]
+   * @param {Array<{id: string, label: string}>} [opts.categorie]
+   * @param {(ev: object) => string} [opts.formattaOrario]
    * @param {(n: number) => void} [opts.onConteggio]
    */
   constructor(opts) {
     this.mappaEl = opts.mappaEl;
-    this.caroselloEl = opts.caroselloEl;
+    this.mappaModalEl = opts.mappaModalEl || null;
+    this.listaEl = opts.listaEl;
     this.cercaZonaBtn = opts.cercaZonaBtn;
     this.onConteggio = opts.onConteggio || (() => {});
 
+    this._categorie = opts.categorie || CATEGORIE;
+    this._labelCategoria = Object.fromEntries(
+      this._categorie.map((c) => [c.id, c.label])
+    );
+
     /** @type {import('leaflet').Map|null} */
     this.mappa = null;
-    /** @type {Map<string, { marker: import('leaflet').Marker, evento: object }>} */
+    /** @type {import('leaflet').Map|null} */
+    this.mappaModal = null;
+    /** @type {Map<string, { marker: import('leaflet').Marker, markerModal: import('leaflet').Marker|null, evento: object }>} */
     this._markers = new Map();
 
     this._eventiGiorno = [];
@@ -42,24 +63,10 @@ export class MappaEsplora {
     this._idSelezionato = null;
     this._zonaConfermata = false;
     this._mappaSpostata = false;
-    this._scrollSyncLock = false;
-    this._scrollEndTimer = null;
-    this._scrollRaf = 0;
     this._muoviProgrammatico = false;
-    this._ultimoPanId = null;
-    this._hasScrollEnd = "onscrollend" in window;
-    this._caroselloPointer = { moved: false };
-    this._caroselloDrag = {
-      active: false,
-      pointerId: null,
-      startX: 0,
-      startScrollLeft: 0,
-      moved: false,
-      isMouse: false,
-    };
+    this._modalAperta = false;
 
     this._formattaOrario = opts.formattaOrario || ((ev) => ev.orario || "");
-    this._placeholderImg = opts.placeholderImg || "assets/placeholder-evento.jpg";
   }
 
   init() {
@@ -68,6 +75,8 @@ export class MappaEsplora {
     this.mappa = L.map(this.mappaEl, {
       zoomControl: false,
       attributionControl: true,
+      dragging: true,
+      scrollWheelZoom: false,
     }).setView(CENTRO_POTENZA, ZOOM_DEFAULT);
 
     L.control.zoom({ position: "topright" }).addTo(this.mappa);
@@ -90,6 +99,9 @@ export class MappaEsplora {
       if (this._mappaSpostata && !this._zonaConfermata) {
         this.cercaZonaBtn.hidden = false;
       }
+      if (this._modalAperta && this.mappaModal) {
+        this._syncVistaModal();
+      }
     });
 
     this.cercaZonaBtn.addEventListener("click", (e) => {
@@ -97,7 +109,11 @@ export class MappaEsplora {
       this.confermaZona();
     });
 
-    this._bindCaroselloInterazioni();
+    this.listaEl.addEventListener("click", (e) => {
+      const card = e.target.closest(".evento-card-h");
+      if (!card) return;
+      this.seleziona(card.dataset.id, { centraMappa: true, scrollLista: false });
+    });
 
     requestAnimationFrame(() => {
       this.mappa?.invalidateSize();
@@ -105,92 +121,40 @@ export class MappaEsplora {
     });
   }
 
-  _bindCaroselloInterazioni() {
-    const el = this.caroselloEl;
+  apriMappaModal() {
+    if (!this.mappaModalEl) return;
+    this._modalAperta = true;
 
-    el.addEventListener("scroll", () => this._onCaroselloScroll(), { passive: true });
+    if (!this.mappaModal) {
+      this.mappaModal = L.map(this.mappaModalEl, {
+        zoomControl: true,
+        attributionControl: true,
+      }).setView(this.mappa.getCenter(), this.mappa.getZoom());
 
-    if (this._hasScrollEnd) {
-      el.addEventListener("scrollend", () => this._onCaroselloScrollEnd(), { passive: true });
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        attribution: "© OpenStreetMap, © CARTO",
+        maxZoom: 19,
+      }).addTo(this.mappaModal);
+
+      this._renderMarkersModal();
     }
 
-    el.addEventListener("pointerdown", (e) => {
-      if (e.pointerType === "mouse" && e.button !== 0) return;
-
-      this._caroselloDrag = {
-        active: true,
-        pointerId: e.pointerId,
-        startX: e.clientX,
-        startScrollLeft: el.scrollLeft,
-        moved: false,
-        isMouse: e.pointerType === "mouse",
-      };
-
-      if (this._caroselloDrag.isMouse) {
-        el.setPointerCapture(e.pointerId);
-        el.classList.add("carosello-trascinamento");
-        el.style.scrollSnapType = "none";
-      }
+    this._syncVistaModal();
+    requestAnimationFrame(() => {
+      this.mappaModal?.invalidateSize();
+      this._syncVistaModal();
     });
+  }
 
-    el.addEventListener(
-      "pointermove",
-      (e) => {
-        const d = this._caroselloDrag;
-        if (!d.active || e.pointerId !== d.pointerId) return;
+  chiudiMappaModal() {
+    this._modalAperta = false;
+  }
 
-        const dx = e.clientX - d.startX;
-        if (Math.abs(dx) > SOGLIA_DRAG_CAROSELLO) d.moved = true;
-
-        if (d.isMouse && d.moved) {
-          e.preventDefault();
-          el.scrollLeft = d.startScrollLeft - dx;
-        }
-      },
-      { passive: false }
-    );
-
-    const fineTrascinamento = (e) => {
-      const d = this._caroselloDrag;
-      if (!d.active || e.pointerId !== d.pointerId) return;
-
-      if (d.isMouse) {
-        el.releasePointerCapture(e.pointerId);
-        el.classList.remove("carosello-trascinamento");
-        el.style.scrollSnapType = "";
-      }
-
-      this._caroselloPointer = { moved: d.moved };
-      d.active = false;
-      d.pointerId = null;
-    };
-
-    el.addEventListener("pointerup", fineTrascinamento);
-    el.addEventListener("pointercancel", fineTrascinamento);
-
-    el.addEventListener("click", (e) => {
-      const card = e.target.closest(".carosello-card");
-      if (!card) return;
-
-      if (this._caroselloPointer.moved) {
-        e.preventDefault();
-        this._caroselloPointer.moved = false;
-        return;
-      }
-
-      const href = card.dataset.href;
-      if (href) {
-        window.location.href = href;
-      }
-    });
-
-    el.addEventListener("keydown", (e) => {
-      if (e.key !== "Enter" && e.key !== " ") return;
-      const card = e.target.closest(".carosello-card");
-      if (!card?.dataset.href) return;
-      e.preventDefault();
-      window.location.href = card.dataset.href;
-    });
+  _syncVistaModal() {
+    if (!this.mappa || !this.mappaModal) return;
+    const center = this.mappa.getCenter();
+    const zoom = this.mappa.getZoom();
+    this.mappaModal.setView(center, zoom, { animate: false });
   }
 
   /** @param {object[]} eventi */
@@ -199,7 +163,6 @@ export class MappaEsplora {
     this._zonaConfermata = false;
     this._mappaSpostata = false;
     this._idSelezionato = null;
-    this._ultimoPanId = null;
     this.cercaZonaBtn.hidden = true;
     this._applicaFiltri();
     this._adattaVista();
@@ -239,18 +202,17 @@ export class MappaEsplora {
     this._eventiVisibili = this._eventiFiltrati();
     this.onConteggio(this._eventiVisibili.length);
     this._renderMarkers();
-    this._renderCarosello();
+    this._renderLista();
 
     if (this._eventiVisibili.length > 0) {
       const ancoraValido = this._eventiVisibili.some((e) => e.id === this._idSelezionato);
       const id = ancoraValido ? this._idSelezionato : this._eventiVisibili[0].id;
       this.seleziona(id, {
         centraMappa: !ancoraValido,
-        scrollCarosello: !ancoraValido,
+        scrollLista: !ancoraValido,
       });
     } else {
       this._idSelezionato = null;
-      this._ultimoPanId = null;
       this._aggiornaMarkerAttivi();
     }
   }
@@ -265,14 +227,19 @@ export class MappaEsplora {
     );
     if (bounds.isValid()) {
       this._muoviProgrammatico = true;
-      this.mappa.fitBounds(bounds, { padding: [48, 48], maxZoom: 13, animate: true });
+      this.mappa.fitBounds(bounds, { padding: [40, 40], maxZoom: 13, animate: true });
     }
   }
 
   _renderMarkers() {
     if (!this.mappa) return;
 
-    this._markers.forEach(({ marker }) => this.mappa.removeLayer(marker));
+    this._markers.forEach(({ marker, markerModal }) => {
+      this.mappa.removeLayer(marker);
+      if (markerModal && this.mappaModal) {
+        this.mappaModal.removeLayer(markerModal);
+      }
+    });
     this._markers.clear();
 
     this._eventiVisibili.forEach((ev) => {
@@ -284,75 +251,130 @@ export class MappaEsplora {
         .addTo(this.mappa)
         .on("click", (e) => {
           L.DomEvent.stopPropagation(e);
-          this.seleziona(ev.id, { centraMappa: true, scrollCarosello: true });
+          this.seleziona(ev.id, { centraMappa: true, scrollLista: true });
         });
-      this._markers.set(ev.id, { marker, evento: ev });
+
+      this._markers.set(ev.id, { marker, markerModal: null, evento: ev });
     });
 
     this._aggiornaMarkerAttivi();
+    if (this.mappaModal) this._renderMarkersModal();
   }
 
-  _aggiornaMarkerAttivi() {
-    this._markers.forEach(({ marker }, id) => {
-      const attivo = id === this._idSelezionato;
-      marker.setIcon(iconaMarker(attivo));
-      if (attivo) marker.setZIndexOffset(1000);
-      else marker.setZIndexOffset(0);
+  _renderMarkersModal() {
+    if (!this.mappaModal) return;
+
+    this._markers.forEach((entry, id) => {
+      if (entry.markerModal) {
+        this.mappaModal.removeLayer(entry.markerModal);
+        entry.markerModal = null;
+      }
+    });
+
+    this._eventiVisibili.forEach((ev) => {
+      const entry = this._markers.get(ev.id);
+      if (!entry) return;
+
+      const markerModal = L.marker([ev.lat, ev.lng], {
+        icon: iconaMarker(ev.id === this._idSelezionato),
+        interactive: true,
+      })
+        .addTo(this.mappaModal)
+        .on("click", () => {
+          this.seleziona(ev.id, { centraMappa: true, scrollLista: true });
+        });
+
+      entry.markerModal = markerModal;
     });
   }
 
-  _renderCarosello() {
+  _aggiornaMarkerAttivi() {
+    this._markers.forEach(({ marker, markerModal }, id) => {
+      const attivo = id === this._idSelezionato;
+      marker.setIcon(iconaMarker(attivo));
+      marker.setZIndexOffset(attivo ? 1000 : 0);
+      if (markerModal) {
+        markerModal.setIcon(iconaMarker(attivo));
+        markerModal.setZIndexOffset(attivo ? 1000 : 0);
+      }
+    });
+  }
+
+  _renderLista() {
     if (this._eventiVisibili.length === 0) {
-      this.caroselloEl.innerHTML = `
-        <div class="carosello-vuoto">
-          <p>Nessun evento in questa zona per il giorno selezionato.</p>
+      this.listaEl.innerHTML = `
+        <div class="stato-vuoto">
+          <p>Nessun evento per il giorno selezionato.</p>
+          <p class="stato-vuoto-sotto">Prova un altro giorno o rimuovi i filtri.</p>
         </div>`;
       return;
     }
 
-    this.caroselloEl.innerHTML = this._eventiVisibili
+    this.listaEl.innerHTML = this._eventiVisibili
       .map((ev) => this._htmlCard(ev))
       .join("");
   }
 
   _htmlCard(ev) {
+    const cat = ev.categoria || "altro";
     const prezzo = ev.prezzo || "Gratis";
     const gratis =
       prezzo.toLowerCase().includes("gratis") ||
       prezzo.toLowerCase().includes("gratuit");
     const attivo = ev.id === this._idSelezionato ? " attiva" : "";
     const href = `evento.html?id=${encodeURIComponent(ev.id)}`;
+    const labelCat = this._labelCategoria[cat] || "Evento";
+    const orario = this._formattaOrario(ev);
+    const luogo = [ev.locale, ev.comune].filter(Boolean).join(" · ");
+    const icona = ICONE_CATEGORIA[cat] || ICONE_CATEGORIA.altro;
+
+    const media = ev.immagine_url
+      ? `<img class="evento-card-h-img" src="${this._escape(ev.immagine_url)}" alt="" loading="lazy" />`
+      : `<div class="evento-card-h-placeholder cat-${this._escape(cat)}">${icona}</div>`;
 
     return `
-      <article class="carosello-card${attivo}" data-id="${this._escape(ev.id)}" data-href="${href}" tabindex="0" aria-label="Apri ${this._escape(ev.titolo)}">
-        <div class="carosello-card-link">
-          <img class="carosello-locandina" src="${this._escape(ev.immagine_url || this._placeholderImg)}" alt="" loading="lazy" draggable="false" />
-          <div class="carosello-corpo">
-            <h3 class="carosello-titolo">${this._escape(ev.titolo)}</h3>
-            ${ev.sottotitolo ? `<p class="carosello-sottotitolo">${this._escape(ev.sottotitolo)}</p>` : ""}
-            <p class="carosello-locale">${this._escape(ev.locale || "")}</p>
-            <div class="carosello-meta">
-              <span>${this._escape(ev.comune || "")}</span>
-              <span class="carosello-meta-sep">·</span>
-              <span>${this._escape(this._formattaOrario(ev))}</span>
+      <article class="evento-card-h cat-${this._escape(cat)}${attivo}" data-id="${this._escape(ev.id)}">
+        <a class="evento-card-h-link" href="${href}">
+          <div class="evento-card-h-media">${media}</div>
+          <div class="evento-card-h-body">
+            <div class="evento-card-h-top">
+              <span class="evento-card-h-badge">${this._escape(labelCat)}</span>
+              ${ev.in_evidenza ? '<span class="evento-card-h-evidenza">In evidenza</span>' : ""}
             </div>
-            <p class="carosello-prezzo${gratis ? " gratis" : ""}">${this._escape(prezzo)}</p>
+            <h3 class="evento-card-h-titolo">${this._escape(ev.titolo)}</h3>
+            ${ev.sottotitolo ? `<p class="evento-card-h-sottotitolo">${this._escape(ev.sottotitolo)}</p>` : ""}
+            <p class="evento-card-h-luogo">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+              <span>${this._escape(luogo)}</span>
+            </p>
+            <div class="evento-card-h-meta">
+              <span class="evento-card-h-orario">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                ${this._escape(orario)}
+              </span>
+              <span class="evento-card-h-prezzo${gratis ? " gratis" : ""}">${this._escape(prezzo)}</span>
+            </div>
           </div>
-        </div>
+          <span class="evento-card-h-freccia" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg>
+          </span>
+        </a>
       </article>`;
   }
 
   /**
    * @param {string} id
-   * @param {{ centraMappa?: boolean, scrollCarosello?: boolean }} [opts]
+   * @param {{ centraMappa?: boolean, scrollLista?: boolean }} [opts]
    */
   seleziona(id, opts = {}) {
-    const { centraMappa = false, scrollCarosello = false } = opts;
+    const { centraMappa = false, scrollLista = false } = opts;
     if (!this._eventiVisibili.some((e) => e.id === id)) return;
 
-    this._syncVisuale(id);
+    this._idSelezionato = id;
+    this._aggiornaMarkerAttivi();
+    this._aggiornaCardAttive();
 
-    if (scrollCarosello) {
+    if (scrollLista) {
       this._scrollAllaCard(id);
     }
 
@@ -361,111 +383,44 @@ export class MappaEsplora {
     }
   }
 
-  /** @param {string} id */
-  _syncVisuale(id) {
-    if (this._idSelezionato === id) return;
-    this._idSelezionato = id;
-    this._aggiornaMarkerAttivi();
-    this._aggiornaCardAttive();
-  }
-
-  /** @returns {string|null} */
-  _idCardCentrale() {
-    const cards = this.caroselloEl.querySelectorAll(".carosello-card");
-    if (cards.length === 0) return null;
-
-    const centro = this.caroselloEl.scrollLeft + this.caroselloEl.clientWidth / 2;
-    let migliore = null;
-    let distMin = Infinity;
-
-    cards.forEach((card) => {
-      const cardCentro = card.offsetLeft + card.offsetWidth / 2;
-      const dist = Math.abs(centro - cardCentro);
-      if (dist < distMin) {
-        distMin = dist;
-        migliore = card.dataset.id;
-      }
-    });
-
-    return migliore;
-  }
-
-  /** @param {string} id */
   _centraMappaSuEvento(id) {
     const ev = this._eventiVisibili.find((e) => e.id === id);
     if (!ev || !this.mappa) return;
 
-    this._ultimoPanId = id;
-    const zoom = this.mappa.getZoom();
+    const zoom = Math.max(this.mappa.getZoom(), 11);
     this._muoviProgrammatico = true;
     this.mappa.flyTo([ev.lat, ev.lng], zoom, {
       duration: 0.55,
       easeLinearity: 0.25,
     });
+
+    if (this.mappaModal) {
+      this.mappaModal.flyTo([ev.lat, ev.lng], zoom, {
+        duration: 0.55,
+        easeLinearity: 0.25,
+      });
+    }
   }
 
   _aggiornaCardAttive() {
-    this.caroselloEl.querySelectorAll(".carosello-card").forEach((card) => {
+    this.listaEl.querySelectorAll(".evento-card-h").forEach((card) => {
       card.classList.toggle("attiva", card.dataset.id === this._idSelezionato);
     });
   }
 
   _scrollAllaCard(id) {
-    const card = this.caroselloEl.querySelector(`.carosello-card[data-id="${CSS.escape(id)}"]`);
-    if (!card) return;
-
-    clearTimeout(this._scrollEndTimer);
-    this._scrollEndTimer = null;
-    this._scrollSyncLock = true;
-    const target =
-      card.offsetLeft - (this.caroselloEl.clientWidth - card.offsetWidth) / 2;
-    this.caroselloEl.scrollTo({ left: target, behavior: "smooth" });
-
-    if (!this._hasScrollEnd) {
-      clearTimeout(this._scrollUnlockTimer);
-      this._scrollUnlockTimer = setTimeout(() => {
-        this._scrollSyncLock = false;
-      }, 500);
-    }
-  }
-
-  _onCaroselloScroll() {
-    if (this._scrollSyncLock) return;
-
-    if (!this._scrollRaf) {
-      this._scrollRaf = requestAnimationFrame(() => {
-        this._scrollRaf = 0;
-        const id = this._idCardCentrale();
-        if (id) this._syncVisuale(id);
-      });
-    }
-
-    if (!this._hasScrollEnd) {
-      clearTimeout(this._scrollEndTimer);
-      this._scrollEndTimer = setTimeout(() => this._onCaroselloScrollEnd(), 180);
-    }
-  }
-
-  _onCaroselloScrollEnd() {
-    if (this._scrollSyncLock) {
-      this._scrollSyncLock = false;
-      clearTimeout(this._scrollUnlockTimer);
-      return;
-    }
-
-    const id = this._idCardCentrale();
-    if (!id) return;
-
-    this._syncVisuale(id);
-
-    if (id !== this._ultimoPanId) {
-      this._centraMappaSuEvento(id);
-    }
+    const card = this.listaEl.querySelector(
+      `.evento-card-h[data-id="${CSS.escape(id)}"]`
+    );
+    card?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
   ridimensiona() {
     requestAnimationFrame(() => {
       this.mappa?.invalidateSize();
+      if (this._modalAperta) {
+        this.mappaModal?.invalidateSize();
+      }
     });
   }
 

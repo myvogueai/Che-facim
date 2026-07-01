@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css" />
 </head>
-<body class="pagina-esplora">
+<body class="pagina-home">
 
   <header class="app-header app-header-compatto">
     <div class="header-riga">
@@ -25,6 +25,7 @@
 
   <div class="filtri-bar filtri-bar-compatta">
     <button class="filtri-bottone" id="bottone-filtra" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
       Filtra per categoria
     </button>
     <button class="filtri-chip-attiva" id="chip-filtro-attivo" type="button" hidden>
@@ -37,22 +38,38 @@
     <div class="filtri-sheet-contenuto" id="filtri-sheet-opzioni"></div>
   </div>
 
-  <main class="esplora-main">
-    <div class="mappa-area">
+  <section class="home-mappa-sezione" aria-label="Mappa eventi">
+    <div class="home-mappa-compatta">
       <button class="cerca-zona-bottone" id="bottone-cerca-zona" type="button" hidden>
         Cerca in questa zona
       </button>
       <div id="mappa"></div>
+      <button class="home-mappa-espandi" id="bottone-mappa-espandi" type="button" aria-label="Apri mappa a schermo intero">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+        Mappa
+      </button>
     </div>
+  </section>
 
-    <div class="carosello-wrap">
-      <div class="carosello-eventi" id="carosello-eventi">
-        <div class="carosello-vuoto carosello-loading">
-          <p>Caricamento eventi…</p>
-        </div>
+  <main class="home-lista-main">
+    <div class="lista-eventi lista-eventi-home" id="lista-eventi">
+      <div class="stato-vuoto stato-vuoto-loading">
+        <p>Caricamento eventi…</p>
       </div>
     </div>
   </main>
+
+  <div class="modal-mappa" id="modal-mappa" hidden>
+    <div class="modal-mappa-header">
+      <h2>Mappa eventi</h2>
+      <button class="modal-mappa-chiudi" id="modal-mappa-chiudi" type="button" aria-label="Chiudi mappa">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-mappa-corpo">
+      <div id="mappa-modal"></div>
+    </div>
+  </div>
 
   <nav class="nav-inferiore">
     <a class="nav-voce attiva" href="index.html">
@@ -86,6 +103,9 @@
     const chipFiltroTesto = document.getElementById('chip-filtro-testo');
     const filtriSheet = document.getElementById('filtri-sheet');
     const filtriSheetOpzioni = document.getElementById('filtri-sheet-opzioni');
+    const modalMappa = document.getElementById('modal-mappa');
+    const bottoneMappaEspandi = document.getElementById('bottone-mappa-espandi');
+    const bottoneMappaChiudi = document.getElementById('modal-mappa-chiudi');
 
     let giornoSelezionato = new Date();
     giornoSelezionato.setHours(0, 0, 0, 0);
@@ -107,16 +127,18 @@
 
     function aggiornaContatore(n) {
       if (n === 0) {
-        contatoreEl.textContent = 'Nessun evento sulla mappa';
+        contatoreEl.textContent = 'Nessun evento per questo giorno';
       } else {
-        contatoreEl.textContent = `${n} ${n === 1 ? 'evento sulla mappa' : 'eventi sulla mappa'}`;
+        contatoreEl.textContent = `${n} ${n === 1 ? 'evento' : 'eventi'} in programma`;
       }
     }
 
     const esplora = new MappaEsplora({
       mappaEl: document.getElementById('mappa'),
-      caroselloEl: document.getElementById('carosello-eventi'),
+      mappaModalEl: document.getElementById('mappa-modal'),
+      listaEl: document.getElementById('lista-eventi'),
       cercaZonaBtn: document.getElementById('bottone-cerca-zona'),
+      categorie: CATEGORIE,
       formattaOrario,
       onConteggio: aggiornaContatore,
     });
@@ -141,8 +163,8 @@
         contenitoreGiorni.appendChild(pill);
       });
 
-      const attivoEl = contenitoreGiorni.querySelector('.giorno-pill.attivo');
-      attivoEl?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+      contenitoreGiorni.querySelector('.giorno-pill.attivo')
+        ?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     }
     renderGiorni();
 
@@ -189,9 +211,26 @@
       if (e.target === filtriSheet) filtriSheet.hidden = true;
     });
 
+    bottoneMappaEspandi.addEventListener('click', () => {
+      modalMappa.hidden = false;
+      esplora.apriMappaModal();
+    });
+
+    bottoneMappaChiudi.addEventListener('click', () => {
+      modalMappa.hidden = true;
+      esplora.chiudiMappaModal();
+    });
+
+    modalMappa.addEventListener('click', (e) => {
+      if (e.target === modalMappa) {
+        modalMappa.hidden = true;
+        esplora.chiudiMappaModal();
+      }
+    });
+
     async function caricaEventi() {
-      document.getElementById('carosello-eventi').innerHTML =
-        '<div class="carosello-vuoto carosello-loading"><p>Caricamento eventi…</p></div>';
+      const lista = document.getElementById('lista-eventi');
+      lista.innerHTML = '<div class="stato-vuoto stato-vuoto-loading"><p>Caricamento eventi…</p></div>';
       contatoreEl.textContent = 'Caricamento eventi…';
 
       try {
@@ -201,8 +240,7 @@
       } catch (err) {
         console.error(err);
         contatoreEl.textContent = 'Errore nel caricamento';
-        document.getElementById('carosello-eventi').innerHTML =
-          '<div class="carosello-vuoto"><p>Errore nel caricamento eventi.</p></div>';
+        lista.innerHTML = '<div class="stato-vuoto"><p>Errore nel caricamento eventi.</p></div>';
       }
     }
 

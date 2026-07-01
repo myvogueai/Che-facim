@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=13" />
+<link rel="stylesheet" href="assets/style.css?v=14" />
 </head>
 <body class="pagina-home">
 
@@ -135,6 +135,15 @@
     const GIORNI_ESTENSIONE = 60;
     const SOGLIA_BORDO_SCROLL = 140;
     const GIORNI_MAX_IN_DOM = 280;
+    const SOGLIA_FOCUS_SELEZIONE = 0.72;
+    const SOGLIA_FOCUS_CARICA = 0.88;
+    const DEBOUNCE_CARICA_MS = 200;
+    const RITARDO_FINE_SCROLL_MS = 130;
+
+    let ultimoTsCaricato = null;
+    let timerCaricaEventi = null;
+    let timerFineScroll = null;
+    let scrollRafFocus = 0;
 
     function oggiMezzanotte() {
       const d = new Date();
@@ -258,16 +267,18 @@
     window.addEventListener('load', () => esplora.ridimensiona());
 
     function creaPillGiorno(g) {
-      const attivo = g.getTime() === giornoSelezionato.getTime();
       const pill = document.createElement('button');
       pill.type = 'button';
-      pill.className = 'giorno-pill' + (attivo ? ' attivo' : '');
+      pill.className = 'giorno-pill';
       pill.dataset.ts = String(g.getTime());
+      pill.style.setProperty('--focus', g.getTime() === giornoSelezionato.getTime() ? '1' : '0');
       pill.innerHTML = `<span class="num">${g.getDate()}</span><span class="label">${NOMI_GIORNI[g.getDay()]}</span>`;
       pill.addEventListener('click', () => {
         giornoSelezionato = clonaGiorno(g);
+        ultimoTsCaricato = giornoSelezionato.getTime();
         aggiornaEtichettaMese(giornoSelezionato);
-        aggiornaStatoAttivoPill();
+        pill.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+        requestAnimationFrame(() => aggiornaFocusPillScroll());
         caricaEventi();
       });
       return pill;
@@ -304,16 +315,64 @@
       return contenitoreGiorni.querySelector(`[data-ts="${ts}"]`);
     }
 
-    function aggiornaStatoAttivoPill() {
-      contenitoreGiorni.querySelectorAll('.giorno-pill').forEach((pill) => {
-        const attivo = pill.dataset.ts === String(giornoSelezionato.getTime());
-        pill.classList.toggle('attivo', attivo);
+    function aggiornaFocusPillScroll() {
+      const pills = contenitoreGiorni.querySelectorAll('.giorno-pill');
+      if (!pills.length) return { migliore: null, maxFocus: 0 };
+
+      const containerRect = contenitoreGiorni.getBoundingClientRect();
+      const viewportCenter = containerRect.left + containerRect.width / 2;
+
+      let migliore = null;
+      let maxFocus = 0;
+
+      pills.forEach((pill) => {
+        const rect = pill.getBoundingClientRect();
+        const pillCenter = rect.left + rect.width / 2;
+        const distanza = Math.abs(pillCenter - viewportCenter);
+        const raggio = Math.max(rect.width * 0.92, 48);
+        const focus = Math.max(0, Math.min(1, 1 - distanza / raggio));
+        pill.style.setProperty('--focus', focus.toFixed(3));
+
+        if (focus > maxFocus) {
+          maxFocus = focus;
+          migliore = pill;
+        }
       });
+
+      return { migliore, maxFocus };
+    }
+
+    function schedulaCaricaEventi(ts) {
+      clearTimeout(timerCaricaEventi);
+      timerCaricaEventi = setTimeout(() => {
+        if (giornoSelezionato.getTime() === ts && ultimoTsCaricato !== ts) {
+          ultimoTsCaricato = ts;
+          caricaEventi();
+        }
+      }, DEBOUNCE_CARICA_MS);
+    }
+
+    function impegnaSelezioneDaCentro(forzaCarica = false) {
+      const { migliore, maxFocus } = aggiornaFocusPillScroll();
+      if (!migliore || maxFocus < SOGLIA_FOCUS_SELEZIONE) return;
+
+      const ts = Number(migliore.dataset.ts);
+      const cambiato = ts !== giornoSelezionato.getTime();
+
+      if (cambiato) {
+        giornoSelezionato = clonaGiorno(new Date(ts));
+        aggiornaEtichettaMese(giornoSelezionato);
+      }
+
+      if (forzaCarica || maxFocus >= SOGLIA_FOCUS_CARICA) {
+        schedulaCaricaEventi(ts);
+      }
     }
 
     function scrollGiornoAttivo() {
-      contenitoreGiorni.querySelector('.giorno-pill.attivo')
-        ?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+      const pill = contenitoreGiorni.querySelector(`.giorno-pill[data-ts="${giornoSelezionato.getTime()}"]`);
+      pill?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+      requestAnimationFrame(() => aggiornaFocusPillScroll());
     }
 
     function renderGiorni({ scrollAttivo = true } = {}) {
@@ -324,6 +383,7 @@
         contenitoreGiorni.appendChild(creaNodoGiorno(g, i > 0 ? giorni[i - 1] : null));
       });
       if (scrollAttivo) scrollGiornoAttivo();
+      else requestAnimationFrame(() => aggiornaFocusPillScroll());
     }
 
     function aggiungiNodiInCoda(nuoviGiorni) {
@@ -440,6 +500,19 @@
 
     let scrollRaf = 0;
     function gestisciScrollCarosello() {
+      contenitoreGiorni.classList.add('giorni-scroll-attivo');
+      clearTimeout(timerFineScroll);
+      timerFineScroll = setTimeout(() => {
+        contenitoreGiorni.classList.remove('giorni-scroll-attivo');
+        impegnaSelezioneDaCentro(true);
+      }, RITARDO_FINE_SCROLL_MS);
+
+      if (scrollRafFocus) return;
+      scrollRafFocus = requestAnimationFrame(() => {
+        scrollRafFocus = 0;
+        impegnaSelezioneDaCentro(false);
+      });
+
       if (scrollRaf) return;
       scrollRaf = requestAnimationFrame(() => {
         scrollRaf = 0;
@@ -461,6 +534,7 @@
     inizializzaCarosello(giornoSelezionato);
     assicuraGiorniAggiornati();
     renderGiorni();
+    requestAnimationFrame(() => aggiornaFocusPillScroll());
 
     contenitoreGiorni.addEventListener('scroll', gestisciScrollCarosello, { passive: true });
 
@@ -543,6 +617,7 @@
     });
 
     async function caricaEventi() {
+      ultimoTsCaricato = giornoSelezionato.getTime();
       const lista = document.getElementById('lista-eventi');
       const carosello = document.getElementById('carosello-mappa');
       lista.innerHTML = '<div class="stato-vuoto stato-vuoto-loading"><p>Caricamento eventi…</p></div>';
@@ -563,7 +638,10 @@
 
     caricaEventi();
 
-    window.addEventListener('resize', () => esplora.ridimensiona());
+    window.addEventListener('resize', () => {
+      esplora.ridimensiona();
+      aggiornaFocusPillScroll();
+    });
   </script>
 </body>
 </html>

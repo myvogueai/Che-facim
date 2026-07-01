@@ -7,14 +7,29 @@ const PROJECT = 'che-facim';
 
 const checks = {};
 
-// Bucket risponde (anche 400/403 = esiste)
+// Avvio upload resumable senza token: 404 = bucket assente, 401/403 = bucket esiste
 try {
-  const res = await fetch(`https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o?name=test-probe`);
-  checks.bucketHttpStatus = res.status;
-  checks.bucketReachable = res.status !== 404;
+  const res = await fetch(
+    `https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o?name=eventi-covers%2Fprobe%2Ftest.jpg&uploadType=resumable`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: 'Firebase probe-token',
+        'Content-Type': 'application/json; charset=UTF-8',
+        'X-Goog-Upload-Protocol': 'resumable',
+        'X-Goog-Upload-Command': 'start',
+        'X-Goog-Upload-Header-Content-Type': 'image/jpeg',
+      },
+      body: '{}',
+    }
+  );
+  const body = await res.json().catch(() => ({}));
+  checks.resumableProbeStatus = res.status;
+  checks.bucketExists = res.status !== 404;
+  checks.resumableProbeMessage = body?.error?.message || null;
 } catch (e) {
-  checks.bucketReachable = false;
-  checks.bucketError = String(e);
+  checks.bucketExists = false;
+  checks.resumableProbeError = String(e);
 }
 
 // Rules deployate: prova lettura pubblica su path inesistente (404 object vs 403 rules)
@@ -40,5 +55,5 @@ try {
 
 console.log(JSON.stringify({ project: PROJECT, bucket: BUCKET, checks }, null, 2));
 
-const ok = checks.bucketReachable && checks.adminHasCopertina;
+const ok = checks.bucketExists && checks.adminHasCopertina;
 process.exit(ok ? 0 : 1);

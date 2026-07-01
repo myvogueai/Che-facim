@@ -22,6 +22,32 @@ jobs:
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Ensure Firebase Storage bucket exists
+        run: |
+          set -euo pipefail
+          BUCKET="che-facim.firebasestorage.app"
+          PROJECT="che-facim"
+          gcloud services enable firebasestorage.googleapis.com storage.googleapis.com \
+            --project "${PROJECT}"
+          if gcloud storage buckets describe "gs://${BUCKET}" --project "${PROJECT}" >/dev/null 2>&1; then
+            echo "Bucket gs://${BUCKET} già presente."
+          else
+            echo "Bucket gs://${BUCKET} assente — creazione in europe-west1..."
+            gcloud storage buckets create "gs://${BUCKET}" \
+              --project="${PROJECT}" \
+              --location=europe-west1 \
+              --uniform-bucket-level-access
+            echo "Bucket creato."
+          fi
+
+      - name: Verify Storage bucket (Admin SDK)
+        run: |
+          npm install @google-cloud/storage@7 --no-save
+          node scripts/verify-storage-bucket.mjs
+
       - name: Deploy to Firebase Hosting
         run: |
           set +e
@@ -46,27 +72,13 @@ jobs:
 
       - name: Deploy Storage rules
         id: deploy-storage
-        continue-on-error: true
         run: |
-          set +e
-          output=$(npx firebase-tools@15.22.3 deploy \
+          set -euo pipefail
+          npx firebase-tools@15.22.3 deploy \
             --only storage \
             --project che-facim \
-            --non-interactive 2>&1)
-          code=$?
-          echo "$output"
-          if [ $code -eq 0 ]; then
-            echo "storage_deployed=true" >> "$GITHUB_OUTPUT"
-          elif echo "$output" | grep -qE "already exists|rules file.*compiled successfully"; then
-            echo "storage_deployed=true" >> "$GITHUB_OUTPUT"
-            echo "Storage rules già pubblicate o aggiornate (409/duplicato considerato OK)."
-          else
-            echo "storage_deployed=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Storage rules non pubblicate. Verifica Firebase Console → Storage."
-          fi
-          exit 0
+            --non-interactive
+          echo "storage_deployed=true" >> "$GITHUB_OUTPUT"
 
-      - name: Verifica deploy Storage
-        if: steps.deploy-storage.outputs.storage_deployed != 'true'
-        run: |
-          echo "::warning::Upload copertine admin non attivo finché Storage non è configurato e le rules non sono deployate."
+      - name: Verify Storage bucket pubblico
+        run: node scripts/verify-storage-ready.mjs

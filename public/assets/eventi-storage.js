@@ -1,23 +1,22 @@
 // eventi-storage.js
 // Upload, compressione e eliminazione copertine evento su Firebase Storage.
 
-import { getApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { app, firebaseConfig } from "./firebase-app.js";
 import {
   getStorage,
   ref,
-  uploadBytes,
+  uploadBytesResumable,
   getDownloadURL,
   deleteObject,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 /** @returns {import('firebase/storage').FirebaseStorage} */
 function storage() {
-  return getStorage(getApp());
+  return getStorage(app, firebaseConfig.storageBucket);
 }
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const MAX_LATO = 1920;
-const UPLOAD_TIMEOUT_MS = 120_000;
 const COMPRESS_TIMEOUT_MS = 90_000;
 const TIPI_ACCETTATI = new Set(["image/jpeg", "image/png", "image/webp"]);
 const ESTENSIONI = {
@@ -25,6 +24,29 @@ const ESTENSIONI = {
   "image/png": "png",
   "image/webp": "webp",
 };
+
+/**
+ * @param {import('firebase/storage').StorageReference} storageRef
+ * @param {Blob} blob
+ * @param {import('firebase/storage').UploadMetadata} metadata
+ */
+function uploadBlob(storageRef, blob, metadata) {
+  return new Promise((resolve, reject) => {
+    const task = uploadBytesResumable(storageRef, blob, metadata);
+    task.on(
+      "state_changed",
+      null,
+      (err) => {
+        console.error("[eventi-storage] upload fallito:", err.code, err.message, {
+          bucket: firebaseConfig.storageBucket,
+          path: storageRef.fullPath,
+        });
+        reject(err);
+      },
+      () => resolve(task.snapshot)
+    );
+  });
+}
 
 /**
  * @param {File} file
@@ -240,14 +262,10 @@ export async function caricaCopertinaEvento(file, eventoId, opts = {}) {
   const storageRef = ref(storage(), path);
 
   opts.onPhase?.("upload");
-  await withTimeout(
-    uploadBytes(storageRef, blob, {
-      contentType,
-      cacheControl: "public,max-age=31536000,immutable",
-    }),
-    UPLOAD_TIMEOUT_MS,
-    "Upload copertina scaduto. Controlla la connessione e riprova."
-  );
+  await uploadBlob(storageRef, blob, {
+    contentType,
+    cacheControl: "public,max-age=31536000,immutable",
+  });
 
   return getDownloadURL(storageRef);
 }
@@ -268,3 +286,5 @@ export async function eliminaCopertinaDaUrl(url) {
     }
   }
 }
+
+export { firebaseConfig };

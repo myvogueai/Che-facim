@@ -96,11 +96,8 @@ export class MappaEsplora {
         this._muoviProgrammatico = false;
         return;
       }
-      if (this._mappaSpostata && !this._zonaConfermata) {
+      if (!this._modalAperta && this._mappaSpostata && !this._zonaConfermata) {
         this.cercaZonaBtn.hidden = false;
-      }
-      if (this._modalAperta && this.mappaModal) {
-        this._syncVistaModal();
       }
     });
 
@@ -124,6 +121,8 @@ export class MappaEsplora {
   apriMappaModal() {
     if (!this.mappaModalEl) return;
     this._modalAperta = true;
+    this._mappaSpostata = false;
+    this.cercaZonaBtn.hidden = true;
 
     if (!this.mappaModal) {
       this.mappaModal = L.map(this.mappaModalEl, {
@@ -135,6 +134,23 @@ export class MappaEsplora {
         attribution: "© OpenStreetMap, © CARTO",
         maxZoom: 19,
       }).addTo(this.mappaModal);
+
+      this.mappaModal.on("movestart", () => {
+        if (this._muoviProgrammatico || this._eventiGiorno.length === 0) return;
+        this._mappaSpostata = true;
+      });
+
+      this.mappaModal.on("moveend", () => {
+        if (this._muoviProgrammatico) {
+          this._muoviProgrammatico = false;
+          return;
+        }
+        if (this._mappaSpostata && !this._zonaConfermata) {
+          this.cercaZonaBtn.hidden = false;
+        }
+        this._muoviProgrammatico = true;
+        this.mappa.setView(this.mappaModal.getCenter(), this.mappaModal.getZoom(), { animate: false });
+      });
 
       this._renderMarkersModal();
     }
@@ -191,8 +207,9 @@ export class MappaEsplora {
     if (this._categoriaFiltro) {
       lista = lista.filter((e) => e.categoria === this._categoriaFiltro);
     }
-    if (this._zonaConfermata && this.mappa) {
-      const bounds = this.mappa.getBounds();
+    const mappaAttiva = this._modalAperta && this.mappaModal ? this.mappaModal : this.mappa;
+    if (this._zonaConfermata && mappaAttiva) {
+      const bounds = mappaAttiva.getBounds();
       lista = lista.filter((e) => bounds.contains([e.lat, e.lng]));
     }
     return lista;
@@ -317,15 +334,16 @@ export class MappaEsplora {
 
   _htmlCard(ev) {
     const cat = ev.categoria || "altro";
-    const prezzo = ev.prezzo || "Gratis";
+    const prezzoRaw = ev.prezzo || "Gratis";
     const gratis =
-      prezzo.toLowerCase().includes("gratis") ||
-      prezzo.toLowerCase().includes("gratuit");
+      prezzoRaw.toLowerCase().includes("gratis") ||
+      prezzoRaw.toLowerCase().includes("gratuit");
+    const prezzoLabel = gratis ? "Gratis" : prezzoRaw;
     const attivo = ev.id === this._idSelezionato ? " attiva" : "";
     const href = `evento.html?id=${encodeURIComponent(ev.id)}`;
     const labelCat = this._labelCategoria[cat] || "Evento";
     const orario = this._formattaOrario(ev);
-    const luogo = [ev.locale, ev.comune].filter(Boolean).join(" · ");
+    const comune = ev.comune || "";
     const icona = ICONE_CATEGORIA[cat] || ICONE_CATEGORIA.altro;
 
     const media = ev.immagine_url
@@ -336,28 +354,32 @@ export class MappaEsplora {
       <article class="evento-card-h cat-${this._escape(cat)}${attivo}" data-id="${this._escape(ev.id)}">
         <a class="evento-card-h-link" href="${href}">
           <div class="evento-card-h-media">${media}</div>
-          <div class="evento-card-h-body">
-            <div class="evento-card-h-top">
+          <div class="evento-card-h-content">
+            <div class="evento-card-h-main">
+              <h3 class="evento-card-h-titolo">${this._escape(ev.titolo)}</h3>
               <span class="evento-card-h-badge">${this._escape(labelCat)}</span>
               ${ev.in_evidenza ? '<span class="evento-card-h-evidenza">In evidenza</span>' : ""}
+              <div class="evento-card-h-dettagli">
+                <span class="evento-card-h-orario">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                  ${this._escape(orario)}
+                </span>
+                <span class="evento-card-h-luogo">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                  ${this._escape(comune)}
+                </span>
+              </div>
             </div>
-            <h3 class="evento-card-h-titolo">${this._escape(ev.titolo)}</h3>
-            ${ev.sottotitolo ? `<p class="evento-card-h-sottotitolo">${this._escape(ev.sottotitolo)}</p>` : ""}
-            <p class="evento-card-h-luogo">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
-              <span>${this._escape(luogo)}</span>
-            </p>
-            <div class="evento-card-h-meta">
-              <span class="evento-card-h-orario">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-                ${this._escape(orario)}
+            <div class="evento-card-h-footer">
+              <span class="evento-card-h-prezzo${gratis ? " gratis" : ""}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 7a5 5 0 0 0-8 4 5 5 0 0 0 8 4M5 10h7M5 14h6"/></svg>
+                ${this._escape(prezzoLabel)}
               </span>
-              <span class="evento-card-h-prezzo${gratis ? " gratis" : ""}">${this._escape(prezzo)}</span>
             </div>
+            <span class="evento-card-h-chevron" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg>
+            </span>
           </div>
-          <span class="evento-card-h-freccia" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg>
-          </span>
         </a>
       </article>`;
   }

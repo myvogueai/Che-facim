@@ -24,9 +24,9 @@
   <div class="giorni-scroll" id="giorni-scroll"></div>
 
   <div class="filtri-bar filtri-bar-compatta">
-    <button class="filtri-bottone" id="bottone-filtra" type="button">
+    <button class="filtri-bottone filtri-bottone-pieno" id="bottone-filtra" type="button">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
-      Filtra per categoria
+      Filtra
     </button>
     <button class="filtri-chip-attiva" id="chip-filtro-attivo" type="button" hidden>
       <span id="chip-filtro-testo"></span>
@@ -38,18 +38,9 @@
     <div class="filtri-sheet-contenuto" id="filtri-sheet-opzioni"></div>
   </div>
 
-  <section class="home-mappa-sezione" aria-label="Mappa eventi">
-    <div class="home-mappa-compatta">
-      <button class="cerca-zona-bottone" id="bottone-cerca-zona" type="button" hidden>
-        Cerca in questa zona
-      </button>
-      <div id="mappa"></div>
-      <button class="home-mappa-espandi" id="bottone-mappa-espandi" type="button" aria-label="Apri mappa a schermo intero">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-        Mappa
-      </button>
-    </div>
-  </section>
+  <div class="home-mappa-nascosta" aria-hidden="true">
+    <div id="mappa"></div>
+  </div>
 
   <main class="home-lista-main">
     <div class="lista-eventi lista-eventi-home" id="lista-eventi">
@@ -59,6 +50,11 @@
     </div>
   </main>
 
+  <button class="bottone-mappa-flottante" id="bottone-mappa-espandi" type="button">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M9 20l-6-3V4l6 3 6-3 6 3v13l-6-3-6 3z"/><path d="M9 7v13M15 4v13"/></svg>
+    Mappa
+  </button>
+
   <div class="modal-mappa" id="modal-mappa" hidden>
     <div class="modal-mappa-header">
       <h2>Mappa eventi</h2>
@@ -67,6 +63,9 @@
       </button>
     </div>
     <div class="modal-mappa-corpo">
+      <button class="cerca-zona-bottone" id="bottone-cerca-zona" type="button" hidden>
+        Cerca in questa zona
+      </button>
       <div id="mappa-modal"></div>
     </div>
   </div>

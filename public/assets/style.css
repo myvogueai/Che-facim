@@ -368,8 +368,10 @@ body.pagina-home .filtri-bottone-pieno {
 }
 
 .lista-eventi-home {
-  padding: 0 20px 16px;
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 20px 28px;
 }
 
 .stato-vuoto-sotto {
@@ -383,14 +385,16 @@ body.pagina-home .filtri-bottone-pieno {
 }
 
 body.pagina-home .bottone-mappa-flottante {
-  bottom: calc(76px + env(safe-area-inset-bottom));
-  z-index: 45;
+  bottom: calc(80px + env(safe-area-inset-bottom));
+  z-index: 55;
   background: var(--pietra);
   color: var(--notte);
   border: none;
-  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.45);
-  padding: 14px 28px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  padding: 14px 32px;
   font-size: 14.5px;
+  font-weight: 700;
+  pointer-events: auto;
 }
 
 body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
@@ -400,11 +404,11 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
 
 /* ============ CARD EVENTO ORIZZONTALE (home premium) ============ */
 .evento-card-h {
-  border-radius: 18px;
-  background: var(--notte-alta);
+  border-radius: 16px;
+  background: var(--superficie);
   border: 1px solid var(--superficie-bordo);
   overflow: hidden;
-  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.28);
+  box-shadow: var(--ombra-card);
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
   animation: entrata-card 0.4s ease backwards;
 }
@@ -416,8 +420,8 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
 .evento-card-h:nth-child(n+5) { animation-delay: 0.18s; }
 
 .evento-card-h.attiva {
-  border-color: rgba(232, 83, 58, 0.55);
-  box-shadow: 0 4px 24px rgba(232, 83, 58, 0.15), var(--ombra-card);
+  border-color: rgba(232, 83, 58, 0.65);
+  box-shadow: 0 6px 28px rgba(232, 83, 58, 0.2), var(--ombra-card);
 }
 
 .evento-card-h:active {
@@ -425,81 +429,71 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
 }
 
 .evento-card-h-link {
-  display: flex;
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 40px;
   align-items: stretch;
-  min-height: 132px;
+  min-height: 112px;
 }
 
+/* Colonna immagine — larghezza fissa, mai percentuale */
 .evento-card-h-media {
-  flex: 0 0 31%;
-  width: 31%;
-  max-width: 120px;
-  min-width: 96px;
-  position: relative;
+  width: 84px;
+  min-width: 84px;
+  max-width: 84px;
+  align-self: stretch;
   overflow: hidden;
-  background: var(--superficie);
+  background: var(--notte-alta);
+  border-right: 1px solid var(--superficie-bordo);
 }
+
+.evento-card-h.cat-musica .evento-card-h-media { box-shadow: inset 3px 0 0 var(--cat-musica); }
+.evento-card-h.cat-sagra .evento-card-h-media { box-shadow: inset 3px 0 0 var(--cat-sagra); }
+.evento-card-h.cat-nightlife .evento-card-h-media { box-shadow: inset 3px 0 0 var(--cat-nightlife); }
+.evento-card-h.cat-teatro .evento-card-h-media { box-shadow: inset 3px 0 0 var(--cat-teatro); }
+.evento-card-h.cat-sport .evento-card-h-media { box-shadow: inset 3px 0 0 var(--cat-sport); }
+.evento-card-h.cat-altro .evento-card-h-media { box-shadow: inset 3px 0 0 var(--cat-altro); }
 
 .evento-card-h-img {
-  width: 100%;
+  width: 84px;
   height: 100%;
-  min-height: 132px;
+  min-height: 112px;
   object-fit: cover;
   display: block;
 }
 
 .evento-card-h-placeholder {
-  width: 100%;
+  width: 84px;
   height: 100%;
-  min-height: 132px;
+  min-height: 112px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px;
+  background: var(--notte-alta);
 }
 
 .evento-card-h-placeholder svg {
-  width: 32px;
-  height: 32px;
-  opacity: 0.6;
+  width: 22px;
+  height: 22px;
+  opacity: 0.35;
 }
 
-.evento-card-h-placeholder.cat-musica {
-  background: linear-gradient(160deg, rgba(232, 83, 58, 0.4), var(--notte-alta));
-  color: var(--cat-musica);
-}
-.evento-card-h-placeholder.cat-sagra {
-  background: linear-gradient(160deg, rgba(232, 178, 58, 0.35), var(--notte-alta));
-  color: var(--cat-sagra);
-}
-.evento-card-h-placeholder.cat-nightlife {
-  background: linear-gradient(160deg, rgba(168, 85, 199, 0.35), var(--notte-alta));
-  color: var(--cat-nightlife);
-}
-.evento-card-h-placeholder.cat-teatro {
-  background: linear-gradient(160deg, rgba(78, 168, 199, 0.35), var(--notte-alta));
-  color: var(--cat-teatro);
-}
-.evento-card-h-placeholder.cat-sport {
-  background: linear-gradient(160deg, rgba(78, 168, 118, 0.35), var(--notte-alta));
-  color: var(--cat-sport);
-}
-.evento-card-h-placeholder.cat-altro {
-  background: linear-gradient(160deg, rgba(124, 118, 147, 0.4), var(--notte-alta));
-  color: var(--cat-altro);
-}
+.evento-card-h-placeholder.cat-musica { color: var(--cat-musica); }
+.evento-card-h-placeholder.cat-sagra { color: var(--cat-sagra); }
+.evento-card-h-placeholder.cat-nightlife { color: var(--cat-nightlife); }
+.evento-card-h-placeholder.cat-teatro { color: var(--cat-teatro); }
+.evento-card-h-placeholder.cat-sport { color: var(--cat-sport); }
+.evento-card-h-placeholder.cat-altro { color: var(--cat-altro); }
 
-.evento-card-h-content {
-  flex: 1;
+/* Colonna contenuto */
+.evento-card-h-body {
   min-width: 0;
+  padding: 12px 10px 10px 14px;
   display: flex;
   flex-direction: column;
-  position: relative;
+  gap: 8px;
 }
 
-.evento-card-h-main {
-  flex: 1;
-  padding: 13px 36px 8px 14px;
+.evento-card-h-testa {
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -507,31 +501,43 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
 
 .evento-card-h-titolo {
   font-family: var(--font-display);
-  font-size: 18px;
-  line-height: 1.15;
+  font-size: 17px;
+  line-height: 1.2;
   letter-spacing: -0.01em;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  color: var(--pietra);
+}
+
+.evento-card-h-badge-riga {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
 }
 
 .evento-card-h-badge {
-  display: block;
-  font-size: 12.5px;
-  font-weight: 600;
-  margin-top: 4px;
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
   color: var(--lavanda);
 }
 
-.evento-card-h.cat-musica .evento-card-h-badge { color: var(--cat-musica); }
-.evento-card-h.cat-sagra .evento-card-h-badge { color: var(--cat-sagra); }
-.evento-card-h.cat-nightlife .evento-card-h-badge { color: var(--cat-nightlife); }
-.evento-card-h.cat-teatro .evento-card-h-badge { color: var(--cat-teatro); }
-.evento-card-h.cat-sport .evento-card-h-badge { color: var(--cat-sport); }
+.evento-card-h.cat-musica .evento-card-h-badge { color: var(--cat-musica); background: rgba(232, 83, 58, 0.14); }
+.evento-card-h.cat-sagra .evento-card-h-badge { color: var(--cat-sagra); background: rgba(232, 178, 58, 0.14); }
+.evento-card-h.cat-nightlife .evento-card-h-badge { color: var(--cat-nightlife); background: rgba(168, 85, 199, 0.14); }
+.evento-card-h.cat-teatro .evento-card-h-badge { color: var(--cat-teatro); background: rgba(78, 168, 199, 0.14); }
+.evento-card-h.cat-sport .evento-card-h-badge { color: var(--cat-sport); background: rgba(78, 168, 118, 0.14); }
 
 .evento-card-h-evidenza {
-  display: inline-block;
   font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
@@ -540,91 +546,97 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
   background: var(--oro-evidenza);
   padding: 2px 7px;
   border-radius: 5px;
-  margin-top: 5px;
-  align-self: flex-start;
 }
 
 .evento-card-h-dettagli {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 14px;
-  margin-top: 10px;
+  gap: 4px 14px;
 }
 
 .evento-card-h-orario,
 .evento-card-h-luogo {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 12.5px;
+  gap: 4px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--pietra-soft);
+  white-space: nowrap;
 }
 
 .evento-card-h-orario svg,
 .evento-card-h-luogo svg {
   flex-shrink: 0;
-  opacity: 0.7;
+  opacity: 0.65;
 }
 
 .evento-card-h-footer {
+  margin-top: auto;
+  padding-top: 8px;
   border-top: 1px solid var(--superficie-bordo);
-  padding: 9px 36px 11px 14px;
 }
 
 .evento-card-h-prezzo {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12.5px;
+  gap: 5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--lavanda);
 }
 
 .evento-card-h-prezzo svg {
-  opacity: 0.75;
+  opacity: 0.7;
 }
 
 .evento-card-h-prezzo.gratis {
   color: var(--verde-gratis);
 }
 
-.evento-card-h-chevron {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--lavanda);
-  opacity: 0.65;
+/* Colonna freccia — allineata verticalmente al centro della card */
+.evento-card-h-azione {
   display: flex;
   align-items: center;
   justify-content: center;
-  pointer-events: none;
+  align-self: center;
+  padding-right: 10px;
+  color: var(--lavanda);
+  opacity: 0.7;
+  transition: color 0.15s ease, opacity 0.15s ease;
 }
 
-.evento-card-h:hover .evento-card-h-chevron,
-.evento-card-h.attiva .evento-card-h-chevron {
+.evento-card-h:hover .evento-card-h-azione,
+.evento-card-h.attiva .evento-card-h-azione {
   color: var(--terracotta);
   opacity: 1;
 }
 
 @media (min-width: 480px) {
+  .evento-card-h-link {
+    grid-template-columns: 96px minmax(0, 1fr) 44px;
+    min-height: 118px;
+  }
+
   .evento-card-h-media {
-    max-width: 130px;
+    width: 96px;
+    min-width: 96px;
+    max-width: 96px;
+  }
+
+  .evento-card-h-img {
+    width: 96px;
+    min-height: 118px;
+  }
+
+  .evento-card-h-placeholder {
+    width: 96px;
+    min-height: 118px;
   }
 
   .evento-card-h-titolo {
-    font-size: 19px;
-  }
-
-  .evento-card-h-link {
-    min-height: 140px;
-  }
-
-  .evento-card-h-img,
-  .evento-card-h-placeholder {
-    min-height: 140px;
+    font-size: 18px;
   }
 }
 

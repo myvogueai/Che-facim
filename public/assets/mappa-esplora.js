@@ -354,32 +354,34 @@ export class MappaEsplora {
       <article class="evento-card-h cat-${this._escape(cat)}${attivo}" data-id="${this._escape(ev.id)}">
         <a class="evento-card-h-link" href="${href}">
           <div class="evento-card-h-media">${media}</div>
-          <div class="evento-card-h-content">
-            <div class="evento-card-h-main">
+          <div class="evento-card-h-body">
+            <div class="evento-card-h-testa">
               <h3 class="evento-card-h-titolo">${this._escape(ev.titolo)}</h3>
-              <span class="evento-card-h-badge">${this._escape(labelCat)}</span>
-              ${ev.in_evidenza ? '<span class="evento-card-h-evidenza">In evidenza</span>' : ""}
-              <div class="evento-card-h-dettagli">
-                <span class="evento-card-h-orario">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-                  ${this._escape(orario)}
-                </span>
-                <span class="evento-card-h-luogo">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
-                  ${this._escape(comune)}
-                </span>
+              <div class="evento-card-h-badge-riga">
+                <span class="evento-card-h-badge">${this._escape(labelCat)}</span>
+                ${ev.in_evidenza ? '<span class="evento-card-h-evidenza">In evidenza</span>' : ""}
               </div>
+            </div>
+            <div class="evento-card-h-dettagli">
+              <span class="evento-card-h-orario">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                ${this._escape(orario)}
+              </span>
+              <span class="evento-card-h-luogo">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+                ${this._escape(comune)}
+              </span>
             </div>
             <div class="evento-card-h-footer">
               <span class="evento-card-h-prezzo${gratis ? " gratis" : ""}">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 7a5 5 0 0 0-8 4 5 5 0 0 0 8 4M5 10h7M5 14h6"/></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 7a5 5 0 0 0-8 4 5 5 0 0 0 8 4M5 10h7M5 14h6"/></svg>
                 ${this._escape(prezzoLabel)}
               </span>
             </div>
-            <span class="evento-card-h-chevron" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg>
-            </span>
           </div>
+          <span class="evento-card-h-azione" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 18l6-6-6-6"/></svg>
+          </span>
         </a>
       </article>`;
   }

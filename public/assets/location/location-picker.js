@@ -11,8 +11,7 @@ import {
   haRicercaInCache,
   parseInputIndirizzo,
   formattaIndirizzoConCivico,
-  comuneAccetta,
-} from "./nominatim-geocoder.js";
+} from "./nominatim-geocoder.js?v=9";
 
 const DEBOUNCE_MS = 300;
 const DEBOUNCE_CIVICO_MS = 500;
@@ -81,8 +80,14 @@ export class LocationPicker {
   _setupSpinner() {
     const wrap = document.createElement("div");
     wrap.className = "indirizzo-input-wrap";
-    this.indirizzoEl.parentNode.insertBefore(wrap, this.indirizzoEl);
+    const parent = this.indirizzoEl.parentNode;
+    parent.insertBefore(wrap, this.indirizzoEl);
     wrap.appendChild(this.indirizzoEl);
+
+    // Ancora il dropdown sotto l'input (non sotto l'intero campo con label)
+    if (this.suggerimentiEl.parentNode === parent) {
+      wrap.appendChild(this.suggerimentiEl);
+    }
 
     this.spinnerEl = document.createElement("span");
     this.spinnerEl.className = "indirizzo-spinner";
@@ -222,6 +227,7 @@ export class LocationPicker {
 
     this._risultatiCorrenti = risultati;
     this.suggerimentiEl.hidden = false;
+    this._aggiornaStato("attenzione", "Seleziona un suggerimento dall'elenco");
 
     this.suggerimentiEl.querySelectorAll(".suggerimento-item[data-index]").forEach((li) => {
       li.addEventListener("mousedown", (e) => {
@@ -275,12 +281,7 @@ export class LocationPicker {
 
     const parsed =
       this._ultimoInputParsed || parseInputIndirizzo(this.indirizzoEl.value);
-    const comuneUtente = this.comuneEl.value.trim();
-    const comune =
-      comuneUtente ||
-      (comuneAccetta(risultato.comune, parsed.comune) ? risultato.comune : null) ||
-      parsed.comune ||
-      risultato.comune;
+    const comune = risultato.comune || parsed.comune || this.comuneEl.value.trim();
     const via = risultato.via || parsed.via;
 
     if (parsed.civico && !this.civicoEl.value.trim()) {
@@ -292,11 +293,8 @@ export class LocationPicker {
     this._coordsVia = { lat: risultato.lat, lng: risultato.lng };
 
     this.indirizzoEl.value = via;
-    if (comune && !comuneUtente) {
+    if (comune) {
       this.comuneEl.value = comune;
-    } else if (comuneUtente) {
-      this.comuneEl.value = comuneUtente;
-      this._comuneCorrente = comuneUtente;
     }
 
     this._posizioneConfermata = true;
@@ -326,10 +324,10 @@ export class LocationPicker {
 
     try {
       const preciso = await geocodeConCivico(this._viaCorrente, civico, comune);
-      if (preciso) {
+      if (preciso?.haCivico) {
         this._impostaCoordinate(preciso.lat, preciso.lng);
         this._posizionaMarker(preciso.lat, preciso.lng, true);
-        this._aggiornaStato(preciso.haCivico ? "trovato" : "attenzione", preciso.haCivico ? undefined : MSG_CIVICO_NON_TROVATO);
+        this._aggiornaStato("trovato");
         return;
       }
     } catch (err) {

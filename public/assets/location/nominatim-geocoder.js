@@ -5,16 +5,12 @@ import {
   parseInputIndirizzo,
   buildQueryRicerca,
   formattaIndirizzoConCivico,
-  comuneAccetta,
-} from "./indirizzo-parser.js";
+} from "./indirizzo-parser.js?v=9";
 
 const PHOTON_URL = "https://photon.komoot.io/api/";
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org";
 
 const CENTRO_BASILICATA = { lat: 40.6404, lng: 15.8056 };
-
-/** Bbox provincia di Potenza / Basilicata — esclude es. Potenza Picena (Marche) */
-const BBOX_BASILICATA = "15.2,39.9,16.5,41.1";
 
 /** @typedef {'offline'|'service'} GeocoderErrorCode */
 
@@ -156,43 +152,6 @@ function deduplicaRisultati(risultati) {
 }
 
 /**
- * Se l'admin ha indicato un comune, tieni solo risultati con match esatto.
- * @param {RisultatoGeocoding[]} risultati
- * @param {string} [comuneRichiesto]
- */
-function filtraPerComune(risultati, comuneRichiesto) {
-  if (!comuneRichiesto?.trim()) return risultati;
-  const esatti = risultati.filter((r) => comuneAccetta(r.comune, comuneRichiesto));
-  return esatti.length > 0 ? esatti : risultati;
-}
-
-/**
- * Autocomplete di fallback via Nominatim (Italia + viewbox Basilicata).
- * @param {string} query
- * @param {string} [comune]
- * @param {number} limit
- */
-async function cercaLuoghiNominatim(query, comune, limit = 5) {
-  const q = comune ? `${query}, ${comune}, Italia` : `${query}, Italia`;
-  const params = new URLSearchParams({
-    q,
-    format: "json",
-    addressdetails: "1",
-    limit: String(limit),
-    countrycodes: "it",
-    viewbox: "16.5,41.1,15.2,39.9",
-    bounded: "1",
-    "accept-language": "it",
-  });
-
-  const res = await fetchGeocoder(`${NOMINATIM_URL}/search?${params}`);
-  const items = await res.json();
-  if (!Array.isArray(items)) return [];
-
-  return deduplicaRisultati(items.map(parseNominatimItem));
-}
-
-/**
  * @param {string} testo
  * @param {{ limit?: number, lat?: number, lng?: number, comune?: string }} opts
  */
@@ -261,24 +220,14 @@ export async function cercaLuoghi(testo, opts = {}) {
     limit: String(Math.min(limit * 2, 10)),
     lat: String(lat),
     lon: String(lng),
-    bbox: BBOX_BASILICATA,
   });
 
   const url = `${PHOTON_URL}?${params}`;
   const res = await fetchGeocoder(url);
   const data = await res.json();
-  let risultati = deduplicaRisultati(
+  const risultati = deduplicaRisultati(
     (data.features || []).map(parsePhotonFeature)
-  );
-  risultati = filtraPerComune(risultati, opts.comune);
-  risultati = risultati.slice(0, limit);
-
-  if (risultati.length === 0) {
-    risultati = filtraPerComune(
-      await cercaLuoghiNominatim(query, opts.comune, limit),
-      opts.comune
-    ).slice(0, limit);
-  }
+  ).slice(0, limit);
 
   cacheRicerche.set(key, risultati);
   return risultati;
@@ -294,16 +243,13 @@ export async function cercaLuoghi(testo, opts = {}) {
 export async function geocodeConCivico(via, civico, comune) {
   if (!via || !civico || !comune) return null;
 
+  const q = formattaIndirizzoConCivico(via, civico, comune);
   const params = new URLSearchParams({
+    q: `${q}, Italia`,
     format: "json",
     addressdetails: "1",
     limit: "5",
     countrycodes: "it",
-    street: `${via} ${civico}`.trim(),
-    city: comune,
-    viewbox: "16.5,41.1,15.2,39.9",
-    bounded: "1",
-    "accept-language": "it",
   });
 
   const url = `${NOMINATIM_URL}/search?${params}`;
@@ -316,8 +262,6 @@ export async function geocodeConCivico(via, civico, comune) {
 
   for (const item of items) {
     const parsed = parseNominatimItem(item);
-    if (!comuneAccetta(parsed.comune, comune)) continue;
-
     const addr = item.address || {};
     const stessaVia =
       parsed.via.toLowerCase().includes(viaNorm) ||
@@ -325,15 +269,14 @@ export async function geocodeConCivico(via, civico, comune) {
     const civicoTrovato = (addr.house_number || "").toLowerCase() === civicoNorm;
 
     if (stessaVia && civicoTrovato) {
-      return { ...parsed, comune, haCivico: true };
+      return { ...parsed, haCivico: true };
     }
   }
 
   for (const item of items) {
     const parsed = parseNominatimItem(item);
-    if (!comuneAccetta(parsed.comune, comune)) continue;
     if (parsed.via.toLowerCase().includes(viaNorm)) {
-      return { ...parsed, comune, haCivico: false };
+      return { ...parsed, haCivico: false };
     }
   }
 
@@ -368,4 +311,4 @@ export function coordinateValide(lat, lng) {
   return !(la === 0 && lo === 0);
 }
 
-export { CENTRO_BASILICATA, parseInputIndirizzo, formattaIndirizzoConCivico, comuneAccetta };
+export { CENTRO_BASILICATA, parseInputIndirizzo, formattaIndirizzoConCivico };

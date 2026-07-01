@@ -10,7 +10,16 @@
     ],
     "headers": [
       {
-        "source": "**/*.@(js|css|png|jpg|jpeg|gif|svg|webp|ico)",
+        "source": "**/*.@(css|js)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=300, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "**/*.@(png|jpg|jpeg|gif|svg|webp|ico)",
         "headers": [
           {
             "key": "Cache-Control",
@@ -32,5 +41,11 @@
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
-  }
+  },
+  "storage": [
+    {
+      "bucket": "che-facim.firebasestorage.app",
+      "rules": "storage.rules"
+    }
+  ]
 }

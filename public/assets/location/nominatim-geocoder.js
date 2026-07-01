@@ -5,7 +5,7 @@ import {
   parseInputIndirizzo,
   buildQueryRicerca,
   formattaIndirizzoConCivico,
-} from "./indirizzo-parser.js";
+} from "./indirizzo-parser.js?v=9";
 
 const PHOTON_URL = "https://photon.komoot.io/api/";
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org";

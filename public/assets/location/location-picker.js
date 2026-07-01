@@ -11,7 +11,7 @@ import {
   haRicercaInCache,
   parseInputIndirizzo,
   formattaIndirizzoConCivico,
-} from "./nominatim-geocoder.js";
+} from "./nominatim-geocoder.js?v=9";
 
 const DEBOUNCE_MS = 300;
 const DEBOUNCE_CIVICO_MS = 500;
@@ -67,14 +67,27 @@ export class LocationPicker {
 
     this._setupSpinner();
     this._bindEvents();
+    this._bindResize();
     this._aggiornaStato("vuoto");
+  }
+
+  _bindResize() {
+    const onResize = () => this.invalidateSize();
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
   }
 
   _setupSpinner() {
     const wrap = document.createElement("div");
     wrap.className = "indirizzo-input-wrap";
-    this.indirizzoEl.parentNode.insertBefore(wrap, this.indirizzoEl);
+    const parent = this.indirizzoEl.parentNode;
+    parent.insertBefore(wrap, this.indirizzoEl);
     wrap.appendChild(this.indirizzoEl);
+
+    // Ancora il dropdown sotto l'input (non sotto l'intero campo con label)
+    if (this.suggerimentiEl.parentNode === parent) {
+      wrap.appendChild(this.suggerimentiEl);
+    }
 
     this.spinnerEl = document.createElement("span");
     this.spinnerEl.className = "indirizzo-spinner";
@@ -214,6 +227,7 @@ export class LocationPicker {
 
     this._risultatiCorrenti = risultati;
     this.suggerimentiEl.hidden = false;
+    this._aggiornaStato("attenzione", "Seleziona un suggerimento dall'elenco");
 
     this.suggerimentiEl.querySelectorAll(".suggerimento-item[data-index]").forEach((li) => {
       li.addEventListener("mousedown", (e) => {
@@ -330,8 +344,26 @@ export class LocationPicker {
     this.lngEl.value = String(lng);
   }
 
+  _ensureMappaDimensions() {
+    this.mappaEl.style.height = "220px";
+    this.mappaEl.style.minHeight = "220px";
+  }
+
+  _refreshMappaSize() {
+    this._ensureMappaDimensions();
+    if (!this.mappa) return;
+    requestAnimationFrame(() => {
+      this.mappa.invalidateSize();
+      requestAnimationFrame(() => this.mappa.invalidateSize());
+    });
+  }
+
   _inizializzaMappa() {
-    if (this.mappa) return;
+    this._ensureMappaDimensions();
+    if (this.mappa) {
+      this._refreshMappaSize();
+      return;
+    }
 
     this.mappa = L.map(this.mappaEl, {
       zoomControl: true,
@@ -343,7 +375,7 @@ export class LocationPicker {
       maxZoom: 19,
     }).addTo(this.mappa);
 
-    requestAnimationFrame(() => this.mappa?.invalidateSize());
+    this._refreshMappaSize();
   }
 
   _posizionaMarker(lat, lng, centra = false) {
@@ -506,8 +538,6 @@ export class LocationPicker {
   }
 
   invalidateSize() {
-    if (this.mappa) {
-      requestAnimationFrame(() => this.mappa.invalidateSize());
-    }
+    this._refreshMappaSize();
   }
 }

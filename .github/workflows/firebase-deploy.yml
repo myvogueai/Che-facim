@@ -22,12 +22,70 @@ jobs:
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Ensure Firebase Storage bucket exists
+        id: ensure-bucket
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          BUCKET="che-facim.firebasestorage.app"
+          PROJECT="che-facim"
+          bucket_ok=false
+          if gcloud storage buckets describe "gs://${BUCKET}" --project "${PROJECT}" >/dev/null 2>&1; then
+            echo "Bucket gs://${BUCKET} già presente (gcloud)."
+            bucket_ok=true
+          else
+            echo "::warning::gcloud non vede il bucket — verifica HTTP..."
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              -X POST \
+              "https://firebasestorage.googleapis.com/v0/b/${BUCKET}/o?name=eventi-covers%2Fprobe%2Ftest.jpg&uploadType=resumable" \
+              -H "Authorization: Firebase probe" \
+              -H "Content-Type: application/json" \
+              -H "X-Goog-Upload-Protocol: resumable" \
+              -H "X-Goog-Upload-Command: start" \
+              -H "X-Goog-Upload-Header-Content-Type: image/jpeg" \
+              -d '{}')
+            if [ "$STATUS" != "404" ]; then
+              echo "Bucket raggiungibile via API Storage (HTTP ${STATUS})."
+              bucket_ok=true
+            else
+              echo "::warning::Bucket gs://${BUCKET} assente — tentativo creazione europe-west1..."
+              if gcloud storage buckets create "gs://${BUCKET}" \
+                --project="${PROJECT}" \
+                --location=europe-west1 \
+                --uniform-bucket-level-access; then
+                echo "Bucket creato."
+                bucket_ok=true
+              else
+                echo "::warning::Impossibile creare il bucket via CI. Abilita Storage in Console se non già fatto."
+              fi
+            fi
+          fi
+          echo "bucket_ok=${bucket_ok}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify Storage bucket (Admin SDK)
+        if: steps.ensure-bucket.outputs.bucket_ok == 'true'
+        continue-on-error: true
+        run: |
+          npm install @google-cloud/storage@7 --no-save
+          node scripts/verify-storage-bucket.mjs
+
       - name: Deploy to Firebase Hosting
         run: |
-          npx firebase-tools@15.22.3 deploy \
+          set +e
+          output=$(npx firebase-tools@15.22.3 deploy \
             --only hosting \
             --project che-facim \
-            --non-interactive
+            --non-interactive 2>&1)
+          code=$?
+          echo "$output"
+          if [ $code -ne 0 ] && echo "$output" | grep -q "is the current active version"; then
+            echo "Hosting già aggiornato (versione già live) — deploy considerato riuscito."
+            exit 0
+          fi
+          exit $code
 
       - name: Deploy Firestore rules and indexes
         run: |
@@ -35,3 +93,22 @@ jobs:
             --only firestore:rules,firestore:indexes \
             --project che-facim \
             --non-interactive
+
+      - name: Deploy Storage rules
+        id: deploy-storage
+        run: |
+          set -euo pipefail
+          npx firebase-tools@15.22.3 deploy \
+            --only storage \
+            --project che-facim \
+            --non-interactive
+          echo "storage_deployed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Verify Storage bucket pubblico
+        if: steps.deploy-storage.outputs.storage_deployed == 'true'
+        run: node scripts/verify-storage-ready.mjs
+
+      - name: Storage non configurato
+        if: steps.ensure-bucket.outputs.bucket_ok != 'true'
+        run: |
+          echo "::warning::Bucket Storage non rilevato da CI. Se hai appena attivato Storage in Console, il prossimo deploy applicherà le regole."

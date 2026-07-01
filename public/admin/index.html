@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Admin — Che facim'?</title>
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/style.css" />
+<link rel="stylesheet" href="../assets/style.css?v=8" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 </head>
@@ -91,7 +91,9 @@
       <input type="hidden" id="lng" />
 
       <div class="posizione-mappa-riga">
-        <div id="mini-mappa" class="mini-mappa" aria-label="Anteprima posizione sulla mappa"></div>
+        <div class="mini-mappa-shell">
+          <div id="mini-mappa" class="mini-mappa" aria-label="Anteprima posizione sulla mappa"></div>
+        </div>
         <div id="posizione-stato" class="posizione-stato posizione-stato--vuoto" aria-live="polite">
           <span class="posizione-stato-icona">⚠️</span> Inserisci un indirizzo per trovare la posizione
         </div>
@@ -127,9 +129,27 @@
       </div>
     </div>
 
-    <div class="campo">
-      <label for="immagine_url">URL locandina/immagine</label>
-      <input type="url" id="immagine_url" placeholder="https://..." />
+    <div class="campo campo-copertina">
+      <label>Copertina evento</label>
+      <input type="hidden" id="immagine_url" />
+      <input
+        type="file"
+        id="copertina-file"
+        accept="image/jpeg,image/png,image/webp"
+        hidden
+      />
+      <div class="copertina-admin">
+        <div class="copertina-preview-wrap" id="copertina-preview-wrap" hidden>
+          <img class="copertina-preview" id="copertina-preview" alt="Anteprima copertina evento" />
+          <div class="copertina-azioni">
+            <button type="button" class="filtri-bottone" id="copertina-sostituisci">Sostituisci</button>
+            <button type="button" class="filtri-bottone copertina-rimuovi" id="copertina-rimuovi">Rimuovi</button>
+          </div>
+        </div>
+        <button type="button" class="filtri-bottone" id="copertina-seleziona">Seleziona immagine</button>
+        <p class="copertina-hint">JPG, JPEG, PNG o WEBP · massimo 5 MB</p>
+        <p class="copertina-errore" id="copertina-errore" hidden></p>
+      </div>
     </div>
 
     <div class="campo">
@@ -162,25 +182,22 @@
 
   <script type="module">
     import { creaEvento, aggiornaEvento, eliminaEvento, getTuttiEventiAdmin } from '../assets/eventi-data.js';
-    import { LocationPicker } from '../assets/location/location-picker.js';
+    import {
+      validaImmagineEvento,
+      caricaCopertinaEvento,
+      eliminaCopertinaDaUrl,
+      isUrlStorageCopertina,
+    } from '../assets/eventi-storage.js?v=9';
+    import { LocationPicker } from '../assets/location/location-picker.js?v=9';
+    import { app } from '../assets/firebase-app.js';
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-    const auth = getAuth();
+    const auth = getAuth(app);
     const vistaLogin = document.getElementById('vista-login');
     const vistaAdmin = document.getElementById('vista-admin');
     const formLogin = document.getElementById('form-login');
     const loginErrore = document.getElementById('login-errore');
     const bottoneLogin = document.getElementById('bottone-login');
-
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        vistaLogin.style.display = 'none';
-        vistaAdmin.style.display = 'block';
-      } else {
-        vistaLogin.style.display = 'block';
-        vistaAdmin.style.display = 'none';
-      }
-    });
 
     formLogin.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -211,6 +228,118 @@
     const bottoneSalva = document.getElementById('bottone-salva');
     const bottoneAnnulla = document.getElementById('bottone-annulla-modifica');
 
+    const copertinaFileEl = document.getElementById('copertina-file');
+    const copertinaPreviewWrap = document.getElementById('copertina-preview-wrap');
+    const copertinaPreview = document.getElementById('copertina-preview');
+    const copertinaSeleziona = document.getElementById('copertina-seleziona');
+    const copertinaSostituisci = document.getElementById('copertina-sostituisci');
+    const copertinaRimuovi = document.getElementById('copertina-rimuovi');
+    const copertinaErrore = document.getElementById('copertina-errore');
+    const immagineUrlEl = document.getElementById('immagine_url');
+
+    let fileCopertinaPendente = null;
+    let copertinaRimossa = false;
+    let anteprimaLocaleUrl = null;
+
+    function mostraErroreCopertina(msg) {
+      if (!msg) {
+        copertinaErrore.hidden = true;
+        copertinaErrore.textContent = '';
+        return;
+      }
+      copertinaErrore.hidden = false;
+      copertinaErrore.textContent = msg;
+    }
+
+    function revocaAnteprimaLocale() {
+      if (anteprimaLocaleUrl) {
+        URL.revokeObjectURL(anteprimaLocaleUrl);
+        anteprimaLocaleUrl = null;
+      }
+    }
+
+    function aggiornaUiCopertina(url = '') {
+      revocaAnteprimaLocale();
+      immagineUrlEl.value = url || '';
+
+      if (url) {
+        copertinaPreview.src = url;
+        copertinaPreviewWrap.hidden = false;
+        copertinaSeleziona.hidden = true;
+      } else {
+        copertinaPreview.removeAttribute('src');
+        copertinaPreviewWrap.hidden = true;
+        copertinaSeleziona.hidden = false;
+      }
+    }
+
+    function resetCopertina() {
+      fileCopertinaPendente = null;
+      copertinaRimossa = false;
+      copertinaFileEl.value = '';
+      mostraErroreCopertina('');
+      aggiornaUiCopertina('');
+    }
+
+    function impostaCopertinaEsistente(url) {
+      fileCopertinaPendente = null;
+      copertinaRimossa = false;
+      copertinaFileEl.value = '';
+      mostraErroreCopertina('');
+      aggiornaUiCopertina(url || '');
+    }
+
+    copertinaSeleziona.addEventListener('click', () => copertinaFileEl.click());
+    copertinaSostituisci.addEventListener('click', () => copertinaFileEl.click());
+
+    copertinaRimuovi.addEventListener('click', () => {
+      fileCopertinaPendente = null;
+      copertinaRimossa = true;
+      copertinaFileEl.value = '';
+      mostraErroreCopertina('');
+      aggiornaUiCopertina('');
+    });
+
+    copertinaFileEl.addEventListener('change', () => {
+      const file = copertinaFileEl.files?.[0];
+      if (!file) return;
+
+      const validazione = validaImmagineEvento(file);
+      if (!validazione.valido) {
+        mostraErroreCopertina(validazione.messaggio);
+        copertinaFileEl.value = '';
+        return;
+      }
+
+      mostraErroreCopertina('');
+      fileCopertinaPendente = file;
+      copertinaRimossa = false;
+      revocaAnteprimaLocale();
+      anteprimaLocaleUrl = URL.createObjectURL(file);
+      copertinaPreview.src = anteprimaLocaleUrl;
+      copertinaPreviewWrap.hidden = false;
+      copertinaSeleziona.hidden = true;
+    });
+
+    async function gestisciCopertinaEvento(eventoId, urlEsistente, onPhase) {
+      if (copertinaRimossa && urlEsistente) {
+        await eliminaCopertinaDaUrl(urlEsistente);
+        return '';
+      }
+
+      if (!fileCopertinaPendente) {
+        return urlEsistente || '';
+      }
+
+      const nuovoUrl = await caricaCopertinaEvento(fileCopertinaPendente, eventoId, {
+        onPhase,
+      });
+      if (urlEsistente && urlEsistente !== nuovoUrl && isUrlStorageCopertina(urlEsistente)) {
+        await eliminaCopertinaDaUrl(urlEsistente);
+      }
+      return nuovoUrl;
+    }
+
     const locationPicker = new LocationPicker({
       localeEl: document.getElementById('locale'),
       indirizzoEl: document.getElementById('indirizzo'),
@@ -221,6 +350,17 @@
       suggerimentiEl: document.getElementById('indirizzo-suggerimenti'),
       mappaEl: document.getElementById('mini-mappa'),
       statoEl: document.getElementById('posizione-stato'),
+    });
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        vistaLogin.style.display = 'none';
+        vistaAdmin.style.display = 'block';
+        requestAnimationFrame(() => locationPicker.invalidateSize());
+      } else {
+        vistaLogin.style.display = 'block';
+        vistaAdmin.style.display = 'none';
+      }
     });
 
     function mostraToast(msg, errore = false) {
@@ -258,6 +398,7 @@
       document.getElementById('evento-id').value = '';
       document.getElementById('prezzo').value = 'Gratis';
       locationPicker.reset();
+      resetCopertina();
       bottoneSalva.textContent = 'Pubblica evento';
       bottoneAnnulla.style.display = 'none';
     }
@@ -275,12 +416,24 @@
       }
 
       bottoneSalva.disabled = true;
-      bottoneSalva.textContent = 'Salvataggio…';
+      const impostaFaseSalvataggio = (testo) => {
+        bottoneSalva.textContent = testo;
+      };
+      const onFaseCopertina = (fase) => {
+        impostaFaseSalvataggio(
+          fase === 'upload' ? 'Upload copertina…' : 'Compressione copertina…'
+        );
+      };
+      const attendiUi = () => new Promise((resolve) => requestAnimationFrame(resolve));
+
+      impostaFaseSalvataggio('Salvataggio…');
+      await attendiUi();
 
       const id = document.getElementById('evento-id').value;
       const dataVal = document.getElementById('data').value;
       const orarioVal = document.getElementById('orario').value;
       const posizione = locationPicker.getDati();
+      const urlCopertinaEsistente = immagineUrlEl.value.trim();
 
       const dati = {
         titolo: document.getElementById('titolo').value.trim(),
@@ -295,7 +448,7 @@
         orario: orarioVal,
         categoria: document.getElementById('categoria').value,
         prezzo: document.getElementById('prezzo').value.trim() || 'Gratis',
-        immagine_url: document.getElementById('immagine_url').value.trim(),
+        immagine_url: urlCopertinaEsistente,
         descrizione: document.getElementById('descrizione').value.trim(),
         contatti: document.getElementById('contatti').value.trim(),
         in_evidenza: document.getElementById('in_evidenza').checked,
@@ -304,19 +457,50 @@
 
       try {
         if (id) {
+          impostaFaseSalvataggio('Salvataggio evento…');
+          await attendiUi();
           await aggiornaEvento(id, dati);
+          if (fileCopertinaPendente) {
+            impostaFaseSalvataggio('Compressione copertina…');
+            await attendiUi();
+          }
+          const immagineFinale = await gestisciCopertinaEvento(id, urlCopertinaEsistente, onFaseCopertina);
+          if (immagineFinale !== urlCopertinaEsistente) {
+            impostaFaseSalvataggio('Aggiornamento copertina…');
+            await attendiUi();
+            await aggiornaEvento(id, { immagine_url: immagineFinale });
+          }
           mostraToast('Evento aggiornato ✓');
         } else {
-          await creaEvento(dati);
+          impostaFaseSalvataggio('Creazione evento…');
+          await attendiUi();
+          dati.immagine_url = '';
+          const ref = await creaEvento(dati);
+          if (fileCopertinaPendente) {
+            impostaFaseSalvataggio('Compressione copertina…');
+            await attendiUi();
+          }
+          const immagineFinale = await gestisciCopertinaEvento(ref.id, '', onFaseCopertina);
+          if (immagineFinale) {
+            impostaFaseSalvataggio('Collegamento copertina…');
+            await attendiUi();
+            await aggiornaEvento(ref.id, { immagine_url: immagineFinale });
+          }
           mostraToast('Evento pubblicato ✓');
         }
         resetForm();
       } catch (err) {
         console.error(err);
-        mostraToast('Errore: ' + err.message, true);
+        let msg = err.message || 'Errore sconosciuto';
+        if (err.code === 'storage/unauthorized') {
+          msg = 'Upload copertina negato: sessione admin scaduta o regole Storage non applicate. Esci, riaccedi e riprova.';
+        } else if (err.code === 'storage/retry-limit-exceeded' || /404|not found|bucket/i.test(msg)) {
+          msg = 'Storage Firebase non configurato (bucket assente). Abilita Storage in Console Firebase.';
+        }
+        mostraToast('Errore: ' + msg, true);
       } finally {
         bottoneSalva.disabled = false;
-        bottoneSalva.textContent = 'Pubblica evento';
+        bottoneSalva.textContent = id ? 'Salva modifiche' : 'Pubblica evento';
       }
     });
 
@@ -379,7 +563,7 @@
             document.getElementById('orario').value = ev.orario || d.toTimeString().slice(0,5);
             document.getElementById('categoria').value = ev.categoria || 'altro';
             document.getElementById('prezzo').value = ev.prezzo || 'Gratis';
-            document.getElementById('immagine_url').value = ev.immagine_url || '';
+            impostaCopertinaEsistente(ev.immagine_url || '');
             document.getElementById('descrizione').value = ev.descrizione || '';
             document.getElementById('contatti').value = ev.contatti || '';
             document.getElementById('in_evidenza').checked = !!ev.in_evidenza;

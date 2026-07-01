@@ -7,9 +7,9 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css" />
+<link rel="stylesheet" href="assets/style.css?v=15" />
 </head>
-<body class="pagina-esplora">
+<body class="pagina-home">
 
   <header class="app-header app-header-compatto">
     <div class="header-riga">
@@ -21,11 +21,15 @@
     </div>
   </header>
 
-  <div class="giorni-scroll" id="giorni-scroll"></div>
+  <div class="giorni-barra">
+    <p class="giorni-mese" id="giorni-mese" aria-live="polite"></p>
+    <div class="giorni-scroll" id="giorni-scroll"></div>
+  </div>
 
   <div class="filtri-bar filtri-bar-compatta">
-    <button class="filtri-bottone" id="bottone-filtra" type="button">
-      Filtra per categoria
+    <button class="filtri-bottone filtri-bottone-pieno" id="bottone-filtra" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+      Filtra
     </button>
     <button class="filtri-chip-attiva" id="chip-filtro-attivo" type="button" hidden>
       <span id="chip-filtro-testo"></span>
@@ -37,22 +41,44 @@
     <div class="filtri-sheet-contenuto" id="filtri-sheet-opzioni"></div>
   </div>
 
-  <main class="esplora-main">
-    <div class="mappa-area">
-      <button class="cerca-zona-bottone" id="bottone-cerca-zona" type="button" hidden>
-        Cerca in questa zona
-      </button>
-      <div id="mappa"></div>
-    </div>
+  <div class="home-mappa-nascosta" aria-hidden="true">
+    <div id="mappa"></div>
+  </div>
 
-    <div class="carosello-wrap">
-      <div class="carosello-eventi" id="carosello-eventi">
-        <div class="carosello-vuoto carosello-loading">
-          <p>Caricamento eventi…</p>
-        </div>
+  <main class="home-lista-main">
+    <div class="lista-eventi lista-eventi-home" id="lista-eventi">
+      <div class="stato-vuoto stato-vuoto-loading">
+        <p>Caricamento eventi…</p>
       </div>
     </div>
   </main>
+
+  <button class="bottone-mappa-flottante" id="bottone-mappa-espandi" type="button">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M9 20l-6-3V4l6 3 6-3 6 3v13l-6-3-6 3z"/><path d="M9 7v13M15 4v13"/></svg>
+    Mappa
+  </button>
+
+  <div class="modal-mappa" id="modal-mappa" hidden>
+    <div class="modal-mappa-header">
+      <h2>Mappa eventi</h2>
+      <button class="modal-mappa-chiudi" id="modal-mappa-chiudi" type="button" aria-label="Chiudi mappa">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-mappa-corpo">
+      <button class="cerca-zona-bottone" id="bottone-cerca-zona" type="button" hidden>
+        Cerca in questa zona
+      </button>
+      <div id="mappa-modal"></div>
+      <div class="carosello-wrap carosello-wrap-mappa">
+        <div class="carosello-eventi" id="carosello-mappa">
+          <div class="carosello-vuoto carosello-loading">
+            <p>Caricamento eventi…</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <nav class="nav-inferiore">
     <a class="nav-voce attiva" href="index.html">
@@ -76,27 +102,132 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script type="module">
     import { getEventiPerGiorno, CATEGORIE } from './assets/eventi-data.js';
-    import { MappaEsplora } from './assets/mappa-esplora.js';
+    import { MappaEsplora } from './assets/mappa-esplora.js?v=7';
 
     const NOMI_GIORNI = ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"];
+    const NOMI_MESI = [
+      "Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno",
+      "Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"
+    ];
     const contenitoreGiorni = document.getElementById('giorni-scroll');
+    const etichettaMeseEl = document.getElementById('giorni-mese');
     const contatoreEl = document.getElementById('contatore-eventi');
     const bottoneFiltra = document.getElementById('bottone-filtra');
     const chipFiltroAttivo = document.getElementById('chip-filtro-attivo');
     const chipFiltroTesto = document.getElementById('chip-filtro-testo');
     const filtriSheet = document.getElementById('filtri-sheet');
     const filtriSheetOpzioni = document.getElementById('filtri-sheet-opzioni');
+    const modalMappa = document.getElementById('modal-mappa');
+    const bottoneMappaEspandi = document.getElementById('bottone-mappa-espandi');
+    const bottoneMappaChiudi = document.getElementById('modal-mappa-chiudi');
 
     let giornoSelezionato = new Date();
     giornoSelezionato.setHours(0, 0, 0, 0);
     let categoriaAttiva = null;
 
-    const giorni = [];
-    for (let i = 0; i < 14; i++) {
-      const g = new Date();
-      g.setDate(g.getDate() + i);
+    let giorni = [];
+    let chiaveCalendarioBarra = '';
+    let giornoInizio = null;
+    let giornoFine = null;
+    let estensioneInCorso = false;
+
+    const GIORNI_BUFFER_INIZIALE = { indietro: 45, avanti: 120 };
+    const GIORNI_ESTENSIONE = 60;
+    const SOGLIA_BORDO_SCROLL = 140;
+    const GIORNI_MAX_IN_DOM = 280;
+    const RITARDO_FINE_SCROLL_MS = 350;
+    const SUPPORTO_SCROLL_END = 'onscrollend' in window;
+
+    let ultimoTsCaricato = null;
+    let timerFineScroll = null;
+    let scrollRafFocus = 0;
+    let scrollProgrammatico = false;
+    let bloccoSelezioneScroll = false;
+
+    function oggiMezzanotte() {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      return d;
+    }
+
+    function clonaGiorno(d) {
+      const g = new Date(d);
       g.setHours(0, 0, 0, 0);
-      giorni.push(g);
+      return g;
+    }
+
+    function isCambioMese(giorno, giornoPrecedente) {
+      if (!giornoPrecedente) return false;
+      return giorno.getMonth() !== giornoPrecedente.getMonth()
+        || giorno.getFullYear() !== giornoPrecedente.getFullYear();
+    }
+
+    function generaIntervalloGiorni(inizio, fine) {
+      const lista = [];
+      const da = clonaGiorno(inizio);
+      const a = clonaGiorno(fine);
+      for (let g = da; g <= a; g.setDate(g.getDate() + 1)) {
+        lista.push(clonaGiorno(g));
+      }
+      return lista;
+    }
+
+    function inizializzaCarosello(ancora) {
+      const centro = clonaGiorno(ancora);
+      const inizio = clonaGiorno(centro);
+      inizio.setDate(inizio.getDate() - GIORNI_BUFFER_INIZIALE.indietro);
+      const fine = clonaGiorno(centro);
+      fine.setDate(fine.getDate() + GIORNI_BUFFER_INIZIALE.avanti);
+      giorni = generaIntervalloGiorni(inizio, fine);
+      giornoInizio = clonaGiorno(giorni[0]);
+      giornoFine = clonaGiorno(giorni[giorni.length - 1]);
+    }
+
+    function aggiornaEtichettaMese(riferimento) {
+      const d = riferimento || giornoSelezionato;
+      etichettaMeseEl.textContent = `${NOMI_MESI[d.getMonth()]} ${d.getFullYear()}`.toUpperCase();
+    }
+
+    function etichettaCambioMese(giorno, giornoPrecedente) {
+      const mese = NOMI_MESI[giorno.getMonth()];
+      if (giorno.getFullYear() !== giornoPrecedente.getFullYear()) {
+        return `${mese} ${giorno.getFullYear()}`;
+      }
+      return mese;
+    }
+
+    function assicuraGiorniAggiornati() {
+      const oggi = oggiMezzanotte();
+      const chiave = `${oggi.getFullYear()}-${oggi.getMonth()}-${oggi.getDate()}`;
+      const cambiato = chiave !== chiaveCalendarioBarra;
+      if (cambiato) {
+        giornoSelezionato = clonaGiorno(oggi);
+        chiaveCalendarioBarra = chiave;
+        ultimoTsCaricato = null;
+
+        if (!giorni.length) {
+          inizializzaCarosello(giornoSelezionato);
+        } else if (!giorni.some((g) => g.getTime() === giornoSelezionato.getTime())) {
+          inizializzaCarosello(giornoSelezionato);
+        } else {
+          if (oggi < giornoInizio) {
+            estendiIndietro(Math.ceil((giornoInizio - oggi) / 86400000) + 14);
+          } else if (oggi > giornoFine) {
+            estendiAvanti(Math.ceil((oggi - giornoFine) / 86400000) + 14);
+          }
+        }
+      }
+      aggiornaEtichettaMese(giornoSelezionato);
+      return cambiato;
+    }
+
+    function resetSelezioneAlOggi() {
+      giornoSelezionato = oggiMezzanotte();
+      chiaveCalendarioBarra = `${giornoSelezionato.getFullYear()}-${giornoSelezionato.getMonth()}-${giornoSelezionato.getDate()}`;
+      ultimoTsCaricato = null;
+      inizializzaCarosello(giornoSelezionato);
+      renderGiorni({ scrollAttivo: true, scrollIstantaneo: true });
+      caricaEventi();
     }
 
     function formattaOrario(ev) {
@@ -118,48 +249,349 @@
       }
     }
 
+    function azzeraFiltroCategoria() {
+      categoriaAttiva = null;
+      aggiornaChipFiltro();
+      esplora.impostaCategoria(null);
+    }
+
     const esplora = new MappaEsplora({
       mappaEl: document.getElementById('mappa'),
-      caroselloEl: document.getElementById('carosello-eventi'),
+      mappaModalEl: document.getElementById('mappa-modal'),
+      listaEl: document.getElementById('lista-eventi'),
+      caroselloEl: document.getElementById('carosello-mappa'),
       cercaZonaBtn: document.getElementById('bottone-cerca-zona'),
+      categorie: CATEGORIE,
       formattaOrario,
       onConteggio: aggiornaContatore,
+      onRimuoviFiltroCategoria: azzeraFiltroCategoria,
     });
 
     esplora.init();
 
     window.addEventListener('load', () => esplora.ridimensiona());
 
-    function renderGiorni() {
-      contenitoreGiorni.innerHTML = '';
-      giorni.forEach(g => {
-        const attivo = g.getTime() === giornoSelezionato.getTime();
-        const pill = document.createElement('button');
-        pill.type = 'button';
-        pill.className = 'giorno-pill' + (attivo ? ' attivo' : '');
-        pill.innerHTML = `<span class="num">${g.getDate()}</span><span class="label">${NOMI_GIORNI[g.getDay()]}</span>`;
-        pill.addEventListener('click', () => {
-          giornoSelezionato = g;
-          renderGiorni();
-          caricaEventi();
-        });
-        contenitoreGiorni.appendChild(pill);
+    function creaPillGiorno(g) {
+      const pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = 'giorno-pill';
+      pill.dataset.ts = String(g.getTime());
+      pill.style.setProperty('--focus', g.getTime() === giornoSelezionato.getTime() ? '1' : '0');
+      pill.innerHTML = `<span class="num">${g.getDate()}</span><span class="label">${NOMI_GIORNI[g.getDay()]}</span>`;
+      pill.addEventListener('click', () => {
+        giornoSelezionato = clonaGiorno(g);
+        aggiornaEtichettaMese(giornoSelezionato);
+        scrollProgrammatico = true;
+        pill.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+        requestAnimationFrame(() => aggiornaFocusPillScroll());
+        schedulaCaricaEventi(giornoSelezionato.getTime());
+      });
+      return pill;
+    }
+
+    function creaNodoGiorno(g, giornoPrecedente) {
+      if (isCambioMese(g, giornoPrecedente)) {
+        const blocco = document.createElement('div');
+        blocco.className = 'giorno-cambio-mese';
+        blocco.dataset.ts = String(g.getTime());
+        blocco.setAttribute('role', 'presentation');
+
+        const segno = document.createElement('span');
+        segno.className = 'giorno-cambio-mese-segno';
+        segno.setAttribute('aria-hidden', 'true');
+        blocco.appendChild(segno);
+
+        const col = document.createElement('div');
+        col.className = 'giorno-cambio-mese-col';
+
+        const etichetta = document.createElement('span');
+        etichetta.className = 'giorno-cambio-mese-etichetta';
+        etichetta.textContent = etichettaCambioMese(g, giornoPrecedente).toUpperCase();
+        col.appendChild(etichetta);
+        col.appendChild(creaPillGiorno(g));
+
+        blocco.appendChild(col);
+        return blocco;
+      }
+      return creaPillGiorno(g);
+    }
+
+    function trovaNodoGiorno(ts) {
+      return contenitoreGiorni.querySelector(`[data-ts="${ts}"]`);
+    }
+
+    function aggiornaFocusPillScroll() {
+      const pills = contenitoreGiorni.querySelectorAll('.giorno-pill');
+      if (!pills.length) return { migliore: null, maxFocus: 0 };
+
+      const containerRect = contenitoreGiorni.getBoundingClientRect();
+      const viewportCenter = containerRect.left + containerRect.width / 2;
+
+      let migliore = null;
+      let maxFocus = 0;
+
+      pills.forEach((pill) => {
+        const rect = pill.getBoundingClientRect();
+        const pillCenter = rect.left + rect.width / 2;
+        const distanza = Math.abs(pillCenter - viewportCenter);
+        const raggio = Math.max(rect.width * 0.92, 48);
+        const focus = Math.max(0, Math.min(1, 1 - distanza / raggio));
+        pill.style.setProperty('--focus', focus.toFixed(3));
+
+        if (focus > maxFocus) {
+          maxFocus = focus;
+          migliore = pill;
+        }
       });
 
-      const attivoEl = contenitoreGiorni.querySelector('.giorno-pill.attivo');
-      attivoEl?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+      return { migliore, maxFocus };
     }
-    renderGiorni();
+
+    function schedulaCaricaEventi(ts) {
+      if (ultimoTsCaricato === ts) return;
+      ultimoTsCaricato = ts;
+      caricaEventi();
+    }
+
+    function finalizzaScrollCarosello() {
+      if (bloccoSelezioneScroll) return;
+      clearTimeout(timerFineScroll);
+      contenitoreGiorni.classList.remove('giorni-scroll-attivo');
+
+      if (scrollProgrammatico) {
+        scrollProgrammatico = false;
+        aggiornaFocusPillScroll();
+        return;
+      }
+
+      const { migliore } = aggiornaFocusPillScroll();
+      if (!migliore) return;
+
+      const ts = Number(migliore.dataset.ts);
+      if (ts === giornoSelezionato.getTime()) return;
+
+      giornoSelezionato = clonaGiorno(new Date(ts));
+      aggiornaEtichettaMese(giornoSelezionato);
+      schedulaCaricaEventi(ts);
+    }
+
+    function scrollGiornoAttivo({ istantaneo = false } = {}) {
+      const pill = contenitoreGiorni.querySelector(`.giorno-pill[data-ts="${giornoSelezionato.getTime()}"]`);
+      if (!pill) return;
+      scrollProgrammatico = true;
+      if (istantaneo) bloccoSelezioneScroll = true;
+      pill.scrollIntoView({
+        inline: 'center',
+        block: 'nearest',
+        behavior: istantaneo ? 'instant' : 'smooth',
+      });
+      if (istantaneo) {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            aggiornaFocusPillScroll();
+            scrollProgrammatico = false;
+            bloccoSelezioneScroll = false;
+          });
+        });
+      } else {
+        requestAnimationFrame(() => aggiornaFocusPillScroll());
+      }
+    }
+
+    function renderGiorni({ scrollAttivo = true, scrollIstantaneo = false } = {}) {
+      assicuraGiorniAggiornati();
+      if (!giorni.length) inizializzaCarosello(giornoSelezionato);
+      contenitoreGiorni.innerHTML = '';
+      giorni.forEach((g, i) => {
+        contenitoreGiorni.appendChild(creaNodoGiorno(g, i > 0 ? giorni[i - 1] : null));
+      });
+      if (scrollAttivo) scrollGiornoAttivo({ istantaneo: scrollIstantaneo });
+      else requestAnimationFrame(() => aggiornaFocusPillScroll());
+    }
+
+    function aggiungiNodiInCoda(nuoviGiorni) {
+      const fragment = document.createDocumentFragment();
+      const indiceBase = giorni.length - nuoviGiorni.length;
+      nuoviGiorni.forEach((g, i) => {
+        const indice = indiceBase + i;
+        const precedente = indice > 0 ? giorni[indice - 1] : null;
+        fragment.appendChild(creaNodoGiorno(g, precedente));
+      });
+      contenitoreGiorni.appendChild(fragment);
+    }
+
+    function aggiungiNodiInTesta(nuoviGiorni) {
+      const larghezzaPrima = contenitoreGiorni.scrollWidth;
+      const fragment = document.createDocumentFragment();
+      nuoviGiorni.forEach((g, i) => {
+        const precedente = i > 0 ? nuoviGiorni[i - 1] : null;
+        fragment.appendChild(creaNodoGiorno(g, precedente));
+      });
+      contenitoreGiorni.insertBefore(fragment, contenitoreGiorni.firstChild);
+
+      const indiceConfine = nuoviGiorni.length;
+      if (indiceConfine < giorni.length && isCambioMese(giorni[indiceConfine], giorni[indiceConfine - 1])) {
+        const nodoEsistente = trovaNodoGiorno(giorni[indiceConfine].getTime());
+        if (nodoEsistente) {
+          nodoEsistente.replaceWith(creaNodoGiorno(giorni[indiceConfine], giorni[indiceConfine - 1]));
+        }
+      }
+
+      contenitoreGiorni.scrollLeft += contenitoreGiorni.scrollWidth - larghezzaPrima;
+    }
+
+    function estendiAvanti(quanti = GIORNI_ESTENSIONE) {
+      if (estensioneInCorso || !giornoFine) return;
+      estensioneInCorso = true;
+      const inizio = clonaGiorno(giornoFine);
+      inizio.setDate(inizio.getDate() + 1);
+      const fine = clonaGiorno(inizio);
+      fine.setDate(fine.getDate() + quanti - 1);
+      const nuovi = generaIntervalloGiorni(inizio, fine);
+      if (!nuovi.length) {
+        estensioneInCorso = false;
+        return;
+      }
+      giorni.push(...nuovi);
+      giornoFine = clonaGiorno(nuovi[nuovi.length - 1]);
+      aggiungiNodiInCoda(nuovi);
+      estensioneInCorso = false;
+    }
+
+    function estendiIndietro(quanti = GIORNI_ESTENSIONE) {
+      if (estensioneInCorso || !giornoInizio) return;
+      estensioneInCorso = true;
+      const fine = clonaGiorno(giornoInizio);
+      fine.setDate(fine.getDate() - 1);
+      const inizio = clonaGiorno(fine);
+      inizio.setDate(inizio.getDate() - quanti + 1);
+      const nuovi = generaIntervalloGiorni(inizio, fine);
+      if (!nuovi.length) {
+        estensioneInCorso = false;
+        return;
+      }
+      giorni.unshift(...nuovi);
+      giornoInizio = clonaGiorno(nuovi[0]);
+      aggiungiNodiInTesta(nuovi);
+      estensioneInCorso = false;
+    }
+
+    function rimuoviNodiDallInizio(quanti) {
+      for (let i = 0; i < quanti; i++) {
+        contenitoreGiorni.firstElementChild?.remove();
+      }
+      const rimossi = giorni.splice(0, quanti);
+      const larghezzaDopo = contenitoreGiorni.scrollWidth;
+      giornoInizio = clonaGiorno(giorni[0]);
+      if (rimossi.length && giorni.length && isCambioMese(giorni[0], rimossi[rimossi.length - 1])) {
+        const primo = trovaNodoGiorno(giorni[0].getTime());
+        if (primo?.classList.contains('giorno-cambio-mese')) {
+          primo.replaceWith(creaPillGiorno(giorni[0]));
+        }
+      }
+      return larghezzaDopo;
+    }
+
+    function rimuoviNodiDallaFine(quanti) {
+      for (let i = 0; i < quanti; i++) {
+        contenitoreGiorni.lastElementChild?.remove();
+      }
+      giorni.splice(giorni.length - quanti, quanti);
+      giornoFine = clonaGiorno(giorni[giorni.length - 1]);
+    }
+
+    function compattaDomSeNecessario() {
+      const eccesso = giorni.length - GIORNI_MAX_IN_DOM;
+      if (eccesso <= 0) return;
+
+      const indiceSelezionato = giorni.findIndex((g) => g.getTime() === giornoSelezionato.getTime());
+      if (indiceSelezionato === -1) return;
+
+      const el = contenitoreGiorni;
+      const range = el.scrollWidth - el.clientWidth;
+      const ratio = range > 0 ? el.scrollLeft / range : 0.5;
+      const daRimuovere = Math.min(eccesso, 60);
+
+      if (ratio < 0.35 && indiceSelezionato < giorni.length - daRimuovere) {
+        rimuoviNodiDallaFine(daRimuovere);
+      } else if (ratio > 0.65 && indiceSelezionato >= daRimuovere) {
+        const larghezzaPrima = el.scrollWidth;
+        rimuoviNodiDallInizio(daRimuovere);
+        el.scrollLeft -= larghezzaPrima - el.scrollWidth;
+      }
+    }
+
+    let scrollRaf = 0;
+    function gestisciScrollCarosello() {
+      contenitoreGiorni.classList.add('giorni-scroll-attivo');
+      clearTimeout(timerFineScroll);
+      timerFineScroll = setTimeout(
+        finalizzaScrollCarosello,
+        SUPPORTO_SCROLL_END ? 600 : RITARDO_FINE_SCROLL_MS
+      );
+
+      if (scrollRafFocus) return;
+      scrollRafFocus = requestAnimationFrame(() => {
+        scrollRafFocus = 0;
+        aggiornaFocusPillScroll();
+      });
+
+      if (scrollRaf) return;
+      scrollRaf = requestAnimationFrame(() => {
+        scrollRaf = 0;
+        if (estensioneInCorso) return;
+
+        const el = contenitoreGiorni;
+        const { scrollLeft, scrollWidth, clientWidth } = el;
+        const distanzaFine = scrollWidth - clientWidth - scrollLeft;
+
+        if (scrollLeft < SOGLIA_BORDO_SCROLL) {
+          estendiIndietro();
+        } else if (distanzaFine < SOGLIA_BORDO_SCROLL) {
+          estendiAvanti();
+        }
+        compattaDomSeNecessario();
+      });
+    }
+
+    resetSelezioneAlOggi();
+
+    contenitoreGiorni.addEventListener('scroll', gestisciScrollCarosello, { passive: true });
+    contenitoreGiorni.addEventListener('scrollend', finalizzaScrollCarosello, { passive: true });
+
+    window.addEventListener('pageshow', (e) => {
+      if (e.persisted) resetSelezioneAlOggi();
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && assicuraGiorniAggiornati()) {
+        renderGiorni({ scrollAttivo: true, scrollIstantaneo: true });
+        caricaEventi();
+      }
+    });
+    setInterval(() => {
+      if (assicuraGiorniAggiornati()) {
+        renderGiorni({ scrollAttivo: true, scrollIstantaneo: true });
+        caricaEventi();
+      }
+    }, 60_000);
 
     function renderFiltriSheet() {
+      const categoriePresenti = esplora.getCategoriePresenti();
+      if (categoriePresenti.length === 0) {
+        filtriSheetOpzioni.innerHTML =
+          '<p class="filtro-opzione filtro-opzione--vuoto">Nessuna categoria disponibile per questo giorno.</p>';
+        return;
+      }
+
       filtriSheetOpzioni.innerHTML = [
         `<button type="button" class="filtro-opzione${!categoriaAttiva ? ' attiva' : ''}" data-cat="">Tutte le categorie</button>`,
-        ...CATEGORIE.map(c =>
+        ...categoriePresenti.map(c =>
           `<button type="button" class="filtro-opzione${categoriaAttiva === c.id ? ' attiva' : ''}" data-cat="${c.id}">${c.label}</button>`
         )
       ].join('');
 
-      filtriSheetOpzioni.querySelectorAll('.filtro-opzione').forEach(btn => {
+      filtriSheetOpzioni.querySelectorAll('.filtro-opzione[data-cat]').forEach(btn => {
         btn.addEventListener('click', () => {
           categoriaAttiva = btn.dataset.cat || null;
           aggiornaChipFiltro();
@@ -185,18 +617,36 @@
     });
 
     chipFiltroAttivo.addEventListener('click', () => {
-      categoriaAttiva = null;
-      aggiornaChipFiltro();
-      esplora.impostaCategoria(null);
+      azzeraFiltroCategoria();
     });
 
     filtriSheet.addEventListener('click', (e) => {
       if (e.target === filtriSheet) filtriSheet.hidden = true;
     });
 
+    bottoneMappaEspandi.addEventListener('click', () => {
+      modalMappa.hidden = false;
+      esplora.apriMappaModal();
+    });
+
+    bottoneMappaChiudi.addEventListener('click', () => {
+      modalMappa.hidden = true;
+      esplora.chiudiMappaModal();
+    });
+
+    modalMappa.addEventListener('click', (e) => {
+      if (e.target === modalMappa) {
+        modalMappa.hidden = true;
+        esplora.chiudiMappaModal();
+      }
+    });
+
     async function caricaEventi() {
-      document.getElementById('carosello-eventi').innerHTML =
-        '<div class="carosello-vuoto carosello-loading"><p>Caricamento eventi…</p></div>';
+      ultimoTsCaricato = giornoSelezionato.getTime();
+      const lista = document.getElementById('lista-eventi');
+      const carosello = document.getElementById('carosello-mappa');
+      lista.innerHTML = '<div class="stato-vuoto stato-vuoto-loading"><p>Caricamento eventi…</p></div>';
+      carosello.innerHTML = '<div class="carosello-vuoto carosello-loading"><p>Caricamento eventi…</p></div>';
       contatoreEl.textContent = 'Caricamento eventi…';
 
       try {
@@ -206,14 +656,15 @@
       } catch (err) {
         console.error(err);
         contatoreEl.textContent = 'Errore nel caricamento';
-        document.getElementById('carosello-eventi').innerHTML =
-          '<div class="carosello-vuoto"><p>Errore nel caricamento eventi.</p></div>';
+        lista.innerHTML = '<div class="stato-vuoto"><p>Errore nel caricamento eventi.</p></div>';
+        carosello.innerHTML = '<div class="carosello-vuoto"><p>Errore nel caricamento eventi.</p></div>';
       }
     }
 
-    caricaEventi();
-
-    window.addEventListener('resize', () => esplora.ridimensiona());
+    window.addEventListener('resize', () => {
+      esplora.ridimensiona();
+      aggiornaFocusPillScroll();
+    });
   </script>
 </body>
 </html>

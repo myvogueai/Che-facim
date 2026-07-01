@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Evento — Che facim'?</title>
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css" />
+<link rel="stylesheet" href="assets/style.css?v=11" />
 <style>
   .top-bar {
     position: absolute; top: 16px; left: 16px; z-index: 10;
@@ -24,18 +24,19 @@
   .descrizione-testo { font-size: 15px; line-height: 1.6; color: var(--pietra-soft); white-space: pre-line; }
   .contatti-box { background: var(--superficie); border-radius: 14px; padding: 16px; margin-top: 10px; }
   .contatti-box a { color: var(--terracotta); font-weight: 600; }
-  .navigazione-btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
-  .navigazione-btns a {
-    flex: 1 1 140px;
-    text-align: center;
-    background: var(--superficie);
-    border: 1px solid var(--superficie-bordo);
-    border-radius: 12px;
-    padding: 12px 14px;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--pietra);
+  .blocco-luogo {
+    display: flex; align-items: center; gap: 10px;
+    width: 100%; min-height: 44px; margin: 0; padding: 4px 0;
+    border: none; background: none; text-align: left;
+    cursor: pointer; font: inherit; color: inherit;
+    -webkit-tap-highlight-color: transparent;
   }
+  .blocco-luogo:active { opacity: 0.72; }
+  .blocco-luogo-pin { flex-shrink: 0; display: flex; }
+  .blocco-luogo-testo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .blocco-luogo-riga1 { color: var(--terracotta); font-weight: 700; font-size: 15px; line-height: 1.3; }
+  .blocco-luogo-riga2 { color: var(--lavanda); font-size: 14px; line-height: 1.35; }
+  .blocco-luogo-freccia { flex-shrink: 0; display: flex; color: var(--pietra-soft); opacity: 0.75; }
   .stato-errore-pagina {
     text-align: center;
     padding: 48px 24px 120px;
@@ -65,58 +66,58 @@
 <body>
 
   <div id="contenuto-evento">
-    <div style="position:relative;">
-      <div class="top-bar">
-        <button type="button" onclick="history.back()" aria-label="Torna indietro">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#faf6ee" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
-        </button>
-      </div>
-      <div class="top-bar destra">
-        <button type="button" id="bottone-preferito" aria-label="Aggiungi ai preferiti">
-          <svg id="icona-cuore" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#faf6ee" stroke-width="2" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
-        </button>
-      </div>
+  <div style="position:relative;">
+    <div class="top-bar">
+      <button type="button" onclick="history.back()" aria-label="Torna indietro">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#faf6ee" stroke-width="2.4" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+    </div>
+    <div class="top-bar destra">
+      <button type="button" id="bottone-preferito" aria-label="Aggiungi ai preferiti">
+        <svg id="icona-cuore" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#faf6ee" stroke-width="2" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+      </button>
+    </div>
+    <div class="dettaglio-hero-wrap">
       <img class="dettaglio-hero" id="img-hero" src="assets/placeholder-evento.jpg" alt="" />
     </div>
+  </div>
 
-    <div class="dettaglio-corpo">
-      <span class="filtri-chip-attiva" id="badge-categoria"></span>
-      <h1 id="el-titolo" style="margin-top:10px;"></h1>
-      <p class="sotto-titolo" id="el-sottotitolo" style="color: var(--lavanda); font-size:15px;"></p>
+  <div class="dettaglio-corpo">
+    <span class="filtri-chip-attiva" id="badge-categoria"></span>
+    <h1 id="el-titolo" style="margin-top:10px;"></h1>
+    <p class="sotto-titolo" id="el-sottotitolo" style="color: var(--lavanda); font-size:15px;"></p>
 
-      <div class="meta-grande">
-        <div class="voce" id="meta-data"></div>
-        <div class="voce" id="meta-orario"></div>
-        <div class="voce" id="meta-prezzo"></div>
-      </div>
+    <div class="meta-grande">
+      <div class="voce" id="meta-data"></div>
+      <div class="voce" id="meta-orario"></div>
+      <div class="voce" id="meta-prezzo"></div>
+    </div>
 
-      <div class="voce" style="margin-bottom: 6px;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--terracotta)" stroke-width="2" aria-hidden="true"><path d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
-        <span id="el-locale" style="color: var(--terracotta); font-weight: 700;"></span>
-      </div>
-      <p id="el-indirizzo" style="color: var(--pietra-soft); font-size: 14.5px; line-height: 1.5; margin-bottom: 4px;"></p>
-      <p id="el-comune" style="color: var(--lavanda); font-size: 14px;"></p>
+    <button type="button" class="blocco-luogo" id="blocco-luogo" hidden>
+      <span class="blocco-luogo-pin" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--terracotta)" stroke-width="2"><path d="M12 21s7-7.5 7-12a7 7 0 1 0-14 0c0 4.5 7 12 7 12z"/><circle cx="12" cy="9" r="2.5"/></svg>
+      </span>
+      <span class="blocco-luogo-testo">
+        <span class="blocco-luogo-riga1" id="el-luogo-riga1"></span>
+        <span class="blocco-luogo-riga2" id="el-luogo-riga2"></span>
+      </span>
+      <span class="blocco-luogo-freccia" aria-hidden="true">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M9 18l6-6-6-6"/></svg>
+      </span>
+    </button>
 
-      <div id="blocco-navigazione" style="display:none;">
-        <p class="sezione-titolo">Come arrivare</p>
-        <div class="navigazione-btns">
-          <a id="link-google-maps" href="#" target="_blank" rel="noopener noreferrer">Apri in Google Maps</a>
-          <a id="link-apple-maps" href="#" target="_blank" rel="noopener noreferrer">Apri in Apple Maps</a>
-        </div>
-      </div>
+    <div id="blocco-descrizione" style="display:none;">
+      <p class="sezione-titolo">Descrizione</p>
+      <p class="descrizione-testo" id="el-descrizione"></p>
+    </div>
 
-      <div id="blocco-descrizione" style="display:none;">
-        <p class="sezione-titolo">Descrizione</p>
-        <p class="descrizione-testo" id="el-descrizione"></p>
-      </div>
-
-      <div id="blocco-contatti" style="display:none;">
-        <p class="sezione-titolo">Contatti / Info</p>
-        <div class="contatti-box">
-          <span id="el-contatti"></span>
-        </div>
+    <div id="blocco-contatti" style="display:none;">
+      <p class="sezione-titolo">Contatti / Info</p>
+      <div class="contatti-box">
+        <span id="el-contatti"></span>
       </div>
     </div>
+  </div>
   </div>
 
   <div id="stato-errore" class="stato-errore-pagina" hidden>
@@ -148,6 +149,7 @@
     import { db } from './assets/eventi-data.js';
     import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { aggiungiPreferito, rimuoviPreferito, ePreferito } from './assets/preferiti.js';
+    import { parseInputIndirizzo } from './assets/location/indirizzo-parser.js';
 
     const params = new URLSearchParams(location.search);
     const id = params.get('id');
@@ -170,26 +172,89 @@
       document.title = `${titolo} — Che facim'?`;
     }
 
-    function impostaNavigazione(ev) {
-      const lat = Number(ev.lat);
-      const lng = Number(ev.lng);
-      const haCoordinate = Number.isFinite(lat) && Number.isFinite(lng);
-      const indirizzo = ev.indirizzo || [ev.locale, ev.comune].filter(Boolean).join(', ');
-      if (!haCoordinate && !indirizzo) return;
+    function estraiViaCivico(ev) {
+      const civicoExtra = (ev.civico || '').trim();
+      if (!ev.indirizzo) return '';
+      const parsed = parseInputIndirizzo(ev.indirizzo);
+      const via = parsed.via.trim();
+      if (!via) return '';
+      const civico = parsed.civico || civicoExtra || null;
+      return civico ? `${via} ${civico}` : via;
+    }
 
-      const query = encodeURIComponent(indirizzo || `${lat},${lng}`);
-      const google = document.getElementById('link-google-maps');
-      const apple = document.getElementById('link-apple-maps');
+    function testoBloccoLuogo(ev) {
+      const locale = (ev.locale || '').trim();
+      const comune = (ev.comune || '').trim();
+      const viaCivico = estraiViaCivico(ev);
 
-      if (haCoordinate) {
-        google.href = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
-        apple.href = `https://maps.apple.com/?ll=${lat},${lng}&q=${query}`;
-      } else {
-        google.href = `https://www.google.com/maps/search/?api=1&query=${query}`;
-        apple.href = `https://maps.apple.com/?q=${query}`;
+      if (locale) {
+        const riga2 = viaCivico && comune
+          ? `${viaCivico} · ${comune}`
+          : comune || viaCivico;
+        return { riga1: locale, riga2: riga2 === locale ? '' : riga2 };
       }
 
-      document.getElementById('blocco-navigazione').style.display = 'block';
+      if (viaCivico) {
+        return {
+          riga1: viaCivico,
+          riga2: comune && !viaCivico.includes(comune) ? comune : '',
+        };
+      }
+
+      return { riga1: comune, riga2: '' };
+    }
+
+    function apriInMappe(ev) {
+      const lat = Number(ev.lat);
+      const lng = Number(ev.lng);
+      const haCoord = Number.isFinite(lat) && Number.isFinite(lng);
+      const indirizzo = (ev.indirizzo || '').trim();
+      const locale = (ev.locale || '').trim();
+      const comune = (ev.comune || '').trim();
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+      let url;
+      if (haCoord) {
+        url = isIOS
+          ? `maps://?ll=${lat},${lng}`
+          : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+      } else if (indirizzo) {
+        const q = encodeURIComponent(indirizzo);
+        url = isIOS
+          ? `maps://?q=${q}`
+          : `https://www.google.com/maps/search/?api=1&query=${q}`;
+      } else {
+        const q = encodeURIComponent([locale, comune].filter(Boolean).join(', '));
+        url = isIOS
+          ? `maps://?q=${q}`
+          : `https://www.google.com/maps/search/?api=1&query=${q}`;
+      }
+
+      window.location.href = url;
+    }
+
+    function impostaBloccoLuogo(ev) {
+      const blocco = document.getElementById('blocco-luogo');
+      const { riga1, riga2 } = testoBloccoLuogo(ev);
+      if (!riga1) {
+        blocco.hidden = true;
+        return;
+      }
+
+      document.getElementById('el-luogo-riga1').textContent = riga1;
+      const elRiga2 = document.getElementById('el-luogo-riga2');
+      if (riga2) {
+        elRiga2.textContent = riga2;
+        elRiga2.hidden = false;
+      } else {
+        elRiga2.textContent = '';
+        elRiga2.hidden = true;
+      }
+
+      const label = [riga1, riga2].filter(Boolean).join(', ');
+      blocco.setAttribute('aria-label', `${label} — apri in mappe`);
+      blocco.hidden = false;
+      blocco.onclick = () => apriInMappe(ev);
     }
 
     async function carica() {
@@ -204,7 +269,6 @@
           mostraStatoErrore('Evento non trovato', 'L\'evento richiesto non esiste o non è più disponibile.');
           return;
         }
-
         const ev = snap.data();
         const d = ev.data?.toDate ? ev.data.toDate() : new Date(ev.data);
 
@@ -225,18 +289,7 @@
         document.getElementById('meta-data').innerHTML = `📅 ${d.toLocaleDateString('it-IT', { day:'2-digit', month:'long' })}`;
         document.getElementById('meta-orario').innerHTML = `🕐 ${formattaOrario(ev, d)}`;
         document.getElementById('meta-prezzo').innerHTML = `💶 ${ev.prezzo || 'Gratis'}`;
-        document.getElementById('el-locale').textContent = ev.locale || '';
-        document.getElementById('el-comune').textContent = ev.comune || '';
-
-        const indirizzoEl = document.getElementById('el-indirizzo');
-        if (ev.indirizzo) {
-          indirizzoEl.textContent = ev.indirizzo;
-          indirizzoEl.style.display = '';
-        } else {
-          indirizzoEl.style.display = 'none';
-        }
-
-        impostaNavigazione(ev);
+        impostaBloccoLuogo(ev);
 
         if (ev.descrizione) {
           document.getElementById('blocco-descrizione').style.display = 'block';
@@ -249,7 +302,6 @@
 
         const cuoreIcona = document.getElementById('icona-cuore');
         const bottonePreferito = document.getElementById('bottone-preferito');
-
         function aggiornaCuore() {
           const attivo = ePreferito(id);
           cuoreIcona.setAttribute('fill', attivo ? '#e8533a' : 'none');

@@ -114,12 +114,29 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 /* ============ SELETTORE GIORNI ============ */
+.giorni-barra {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.giorni-mese {
+  margin: 0;
+  padding: 0 20px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--lavanda);
+}
+
 .giorni-scroll {
   display: flex;
   gap: 10px;
   overflow-x: auto;
   padding: 4px 20px 18px;
   scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
 }
 .giorni-scroll::-webkit-scrollbar { display: none; }
 
@@ -134,26 +151,98 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   align-items: center;
   justify-content: center;
   gap: 2px;
-  transition: background 0.15s ease, transform 0.15s ease;
+  position: relative;
+  isolation: isolate;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  scroll-snap-align: center;
+  --focus: 0;
+  transform: translateY(calc(var(--focus) * -2px)) scale(calc(1 + var(--focus) * 0.04));
+  box-shadow: 0 calc(4px * var(--focus)) calc(18px * var(--focus)) rgba(232, 83, 58, calc(0.38 * var(--focus)));
+  transition:
+    transform 200ms cubic-bezier(0.25, 0.1, 0.25, 1),
+    box-shadow 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.giorno-pill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(145deg, var(--terracotta) 0%, var(--terracotta-scuro) 100%);
+  opacity: var(--focus);
+  transition: opacity 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
+  z-index: 0;
+}
+
+.giorni-scroll.giorni-scroll-attivo .giorno-pill,
+.giorni-scroll.giorni-scroll-attivo .giorno-pill::before {
+  transition: none;
 }
 
 .giorno-pill .num {
   font-family: var(--font-display);
   font-size: 19px;
   line-height: 1;
+  position: relative;
+  z-index: 1;
+  color: color-mix(in srgb, var(--pietra) calc((1 - var(--focus)) * 100%), #fff calc(var(--focus) * 100%));
+  transition: color 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 .giorno-pill .label {
   font-size: 10.5px;
-  color: var(--lavanda);
+  color: color-mix(in srgb, var(--lavanda) calc((1 - var(--focus)) * 100%), rgba(255, 255, 255, 0.9) calc(var(--focus) * 100%));
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  position: relative;
+  z-index: 1;
+  transition: color 200ms cubic-bezier(0.25, 0.1, 0.25, 1);
 }
 
-.giorno-pill.attivo {
-  background: var(--terracotta);
-  transform: translateY(-2px);
+.giorni-scroll.giorni-scroll-attivo .giorno-pill .num,
+.giorni-scroll.giorni-scroll-attivo .giorno-pill .label {
+  transition: none;
 }
-.giorno-pill.attivo .label { color: rgba(255,255,255,0.85); }
+
+.giorno-cambio-mese {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  scroll-snap-align: center;
+}
+
+.giorno-cambio-mese-segno {
+  width: 1px;
+  height: 36px;
+  margin-bottom: 14px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--superficie-bordo) 20%,
+    var(--superficie-bordo) 80%,
+    transparent
+  );
+  flex-shrink: 0;
+}
+
+.giorno-cambio-mese-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.giorno-cambio-mese-etichetta {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--terracotta);
+  text-transform: uppercase;
+  white-space: nowrap;
+  line-height: 1;
+}
 
 /* ============ FILTRI ============ */
 .filtri-bar {
@@ -319,6 +408,347 @@ body.pagina-esplora .giorni-scroll {
   font-weight: 600;
 }
 
+.filtro-opzione--vuoto {
+  cursor: default;
+  text-align: center;
+  color: var(--lavanda);
+  font-size: 14px;
+}
+
+/* ============ PAGINA HOME (lista premium + mappa flottante) ============ */
+body.pagina-home {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-bottom: calc(100px + env(safe-area-inset-bottom));
+}
+
+body.pagina-home .app-header-compatto {
+  padding-bottom: 6px;
+}
+
+body.pagina-home .giorni-mese {
+  padding-bottom: 10px;
+}
+
+body.pagina-home .giorni-scroll {
+  padding: 0 20px 14px;
+}
+
+body.pagina-home .filtri-bar-compatta {
+  flex-wrap: wrap;
+  padding-bottom: 14px;
+}
+
+body.pagina-home .filtri-bottone-pieno {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(42, 36, 56, 0.85);
+  border: 1px solid var(--superficie-bordo);
+  font-weight: 500;
+}
+
+.home-mappa-nascosta {
+  position: fixed;
+  width: 400px;
+  height: 300px;
+  left: -9999px;
+  top: 0;
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.home-lista-main {
+  flex: 1;
+}
+
+.lista-eventi-home {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 20px 28px;
+}
+
+.stato-vuoto-sotto {
+  font-size: 13px;
+  margin-top: 8px;
+  opacity: 0.75;
+}
+
+.bottone-rimuovi-filtro {
+  margin-top: 16px;
+  width: auto;
+  display: inline-flex;
+  align-self: center;
+}
+
+.stato-vuoto-loading p {
+  animation: pulse-testo 1.2s ease-in-out infinite;
+}
+
+body.pagina-home .bottone-mappa-flottante {
+  bottom: calc(80px + env(safe-area-inset-bottom));
+  z-index: 55;
+  background: var(--pietra);
+  color: var(--notte);
+  border: none;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  padding: 14px 32px;
+  font-size: 14.5px;
+  font-weight: 700;
+  pointer-events: auto;
+}
+
+body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
+  top: 14px;
+  z-index: 500;
+}
+
+/* ============ CARD EVENTO ORIZZONTALE (home premium) ============ */
+.evento-card-h {
+  border-radius: 16px;
+  background: var(--superficie);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(0, 0, 0, 0.2);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  animation: entrata-card 0.4s ease backwards;
+  isolation: isolate;
+}
+
+.evento-card-h:nth-child(1) { animation-delay: 0.02s; }
+.evento-card-h:nth-child(2) { animation-delay: 0.06s; }
+.evento-card-h:nth-child(3) { animation-delay: 0.1s; }
+.evento-card-h:nth-child(4) { animation-delay: 0.14s; }
+.evento-card-h:nth-child(n+5) { animation-delay: 0.18s; }
+
+.evento-card-h.attiva {
+  border-color: rgba(232, 83, 58, 0.65);
+  box-shadow: 0 6px 28px rgba(232, 83, 58, 0.2), var(--ombra-card);
+}
+
+.evento-card-h:active {
+  transform: scale(0.985);
+}
+
+.evento-card-h-link {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) 48px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0 10px 12px;
+  min-height: 108px;
+}
+
+/* Colonna immagine — larghezza fissa in px, mai percentuale */
+.evento-card-h-media {
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+  height: 108px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--notte-alta);
+  flex-shrink: 0;
+}
+
+.evento-card-h.cat-musica .evento-card-h-media { box-shadow: inset 0 0 0 2px rgba(232, 83, 58, 0.35); }
+.evento-card-h.cat-sagra .evento-card-h-media { box-shadow: inset 0 0 0 2px rgba(232, 178, 58, 0.35); }
+.evento-card-h.cat-nightlife .evento-card-h-media { box-shadow: inset 0 0 0 2px rgba(168, 85, 199, 0.35); }
+.evento-card-h.cat-teatro .evento-card-h-media { box-shadow: inset 0 0 0 2px rgba(78, 168, 199, 0.35); }
+.evento-card-h.cat-sport .evento-card-h-media { box-shadow: inset 0 0 0 2px rgba(78, 168, 118, 0.35); }
+.evento-card-h.cat-altro .evento-card-h-media { box-shadow: inset 0 0 0 2px rgba(124, 118, 147, 0.35); }
+
+.evento-card-h-img {
+  width: 80px;
+  height: 108px;
+  object-fit: cover;
+  display: block;
+}
+
+.evento-card-h-placeholder {
+  width: 80px;
+  height: 108px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--notte-alta);
+}
+
+.evento-card-h-placeholder svg {
+  width: 20px;
+  height: 20px;
+  opacity: 0.3;
+}
+
+.evento-card-h-placeholder.cat-musica { color: var(--cat-musica); }
+.evento-card-h-placeholder.cat-sagra { color: var(--cat-sagra); }
+.evento-card-h-placeholder.cat-nightlife { color: var(--cat-nightlife); }
+.evento-card-h-placeholder.cat-teatro { color: var(--cat-teatro); }
+.evento-card-h-placeholder.cat-sport { color: var(--cat-sport); }
+.evento-card-h-placeholder.cat-altro { color: var(--cat-altro); }
+
+/* Colonna contenuto */
+.evento-card-h-body {
+  min-width: 0;
+  padding: 14px 6px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+}
+
+.evento-card-h-testa {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.evento-card-h-titolo {
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1.18;
+  letter-spacing: -0.01em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--pietra);
+}
+
+.evento-card-h-badge-riga {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.evento-card-h-badge {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--lavanda);
+}
+
+.evento-card-h.cat-musica .evento-card-h-badge { color: var(--cat-musica); background: rgba(232, 83, 58, 0.14); }
+.evento-card-h.cat-sagra .evento-card-h-badge { color: var(--cat-sagra); background: rgba(232, 178, 58, 0.14); }
+.evento-card-h.cat-nightlife .evento-card-h-badge { color: var(--cat-nightlife); background: rgba(168, 85, 199, 0.14); }
+.evento-card-h.cat-teatro .evento-card-h-badge { color: var(--cat-teatro); background: rgba(78, 168, 199, 0.14); }
+.evento-card-h.cat-sport .evento-card-h-badge { color: var(--cat-sport); background: rgba(78, 168, 118, 0.14); }
+
+.evento-card-h-evidenza {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--notte);
+  background: var(--oro-evidenza);
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+
+.evento-card-h-dettagli {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+}
+
+.evento-card-h-orario,
+.evento-card-h-luogo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--pietra-soft);
+  white-space: nowrap;
+}
+
+.evento-card-h-orario svg,
+.evento-card-h-luogo svg {
+  flex-shrink: 0;
+  opacity: 0.65;
+}
+
+.evento-card-h-footer {
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--superficie-bordo);
+}
+
+.evento-card-h-prezzo {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--lavanda);
+}
+
+.evento-card-h-prezzo svg {
+  opacity: 0.7;
+}
+
+.evento-card-h-prezzo.gratis {
+  color: var(--verde-gratis);
+}
+
+/* Colonna freccia — centrata verticalmente, separata dal contenuto */
+.evento-card-h-azione {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--lavanda);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.evento-card-h:hover .evento-card-h-azione,
+.evento-card-h.attiva .evento-card-h-azione {
+  background: var(--terracotta);
+  color: #fff;
+}
+
+@media (min-width: 480px) {
+  .evento-card-h-link {
+    grid-template-columns: 92px minmax(0, 1fr) 52px;
+    min-height: 116px;
+  }
+
+  .evento-card-h-media {
+    width: 92px;
+    min-width: 92px;
+    max-width: 92px;
+    height: 116px;
+  }
+
+  .evento-card-h-img,
+  .evento-card-h-placeholder {
+    width: 92px;
+    height: 116px;
+  }
+
+  .evento-card-h-titolo {
+    font-size: 19px;
+  }
+}
+
 .esplora-main {
   flex: 1;
   min-height: 0;
@@ -392,6 +822,16 @@ body.pagina-esplora .giorni-scroll {
   pointer-events: none;
 }
 
+.carosello-wrap-mappa {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  padding: 24px 0 max(14px, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--notte) 78%, rgba(15, 13, 20, 0.55) 92%, transparent);
+}
+
 .carosello-eventi {
   display: flex;
   gap: 12px;
@@ -400,7 +840,7 @@ body.pagina-esplora .giorni-scroll {
   scroll-behavior: smooth;
   padding-block: 4px;
   /* Permette di centrare anche la prima e l'ultima card */
-  padding-inline: max(20px, calc(50% - min(41vw, 150px)));
+  padding-inline: max(20px, calc(50% - min(44vw, 170px)));
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x;
@@ -421,99 +861,55 @@ body.pagina-esplora .giorni-scroll {
 
 .carosello-eventi::-webkit-scrollbar { display: none; }
 
-.carosello-card {
-  flex: 0 0 min(82vw, 300px);
+.carosello-card.evento-card-h {
+  flex: 0 0 min(88vw, 340px);
   scroll-snap-align: center;
-  border-radius: 16px;
-  background: var(--superficie);
-  overflow: hidden;
-  box-shadow: var(--ombra-card);
-  border: 2px solid transparent;
-  transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
   cursor: pointer;
   pointer-events: auto;
   touch-action: pan-x;
   -webkit-user-drag: none;
+  animation: none;
+  margin: 0;
 }
 
-.carosello-card.attiva {
-  border-color: var(--terracotta);
+.carosello-card.evento-card-h.attiva {
+  border-color: rgba(232, 83, 58, 0.65);
   transform: scale(1.02);
   box-shadow: 0 6px 28px rgba(232, 83, 58, 0.2), var(--ombra-card);
 }
 
-.carosello-card-link {
-  display: flex;
-  height: 100%;
-  min-height: 118px;
+.carosello-card-link.evento-card-h-link {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) 48px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0 10px 12px;
+  min-height: 128px;
   touch-action: pan-x;
 }
 
-.carosello-locandina {
-  width: 96px;
-  flex-shrink: 0;
-  object-fit: cover;
-  background: var(--notte-alta);
-}
-
-.carosello-corpo {
-  flex: 1;
-  min-width: 0;
-  padding: 12px 14px 12px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.carosello-titolo {
-  font-family: var(--font-display);
-  font-size: 15px;
-  line-height: 1.2;
-  display: -webkit-box;
+.carosello-card .evento-card-h-titolo {
+  font-size: 16px;
   -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
-.carosello-sottotitolo {
-  font-size: 12px;
-  color: var(--lavanda);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.carosello-card .evento-card-h-body {
+  padding: 12px 6px 12px 12px;
 }
 
-.carosello-locale {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--terracotta);
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+@media (min-width: 480px) {
+  .carosello-card.evento-card-h {
+    flex: 0 0 min(82vw, 360px);
+  }
 
-.carosello-meta {
-  font-size: 12px;
-  color: var(--pietra-soft);
-  margin-top: auto;
-  padding-top: 4px;
-}
+  .carosello-card-link.evento-card-h-link {
+    grid-template-columns: 92px minmax(0, 1fr) 52px;
+    min-height: 136px;
+  }
 
-.carosello-meta-sep {
-  margin: 0 4px;
-  opacity: 0.5;
-}
-
-.carosello-prezzo {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--lavanda);
-  margin-top: 2px;
-}
-
-.carosello-prezzo.gratis {
-  color: var(--verde-gratis);
+  .carosello-card .evento-card-h-titolo {
+    font-size: 17px;
+  }
 }
 
 .carosello-vuoto {
@@ -523,6 +919,7 @@ body.pagina-esplora .giorni-scroll {
   text-align: center;
   color: var(--lavanda);
   font-size: 14px;
+  pointer-events: auto;
 }
 
 .carosello-loading p {
@@ -561,6 +958,7 @@ body.pagina-esplora .giorni-scroll {
   display: none;
   flex-direction: column;
 }
+.modal-mappa:not([hidden]),
 .modal-mappa.aperta { display: flex; }
 
 .modal-mappa-header {
@@ -587,6 +985,15 @@ body.pagina-esplora .giorni-scroll {
 .modal-mappa-corpo {
   flex: 1;
   position: relative;
+  min-height: 0;
+}
+
+.modal-mappa-corpo #mappa-modal {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
 }
 
 .cerca-zona-bottone {
@@ -821,14 +1228,27 @@ body.pagina-esplora .giorni-scroll {
 }
 
 /* ============ SCHEDA EVENTO (dettaglio) ============ */
+.dettaglio-hero-wrap {
+  background: var(--notte-alta);
+  width: 100%;
+  min-height: 220px;
+  max-height: min(56vh, 420px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .dettaglio-hero {
   width: 100%;
-  height: 280px;
-  object-fit: cover;
+  height: auto;
+  max-height: min(56vh, 420px);
+  object-fit: contain;
+  object-position: center;
 }
 
 .dettaglio-corpo {
   padding: 20px;
+  padding-bottom: calc(100px + env(safe-area-inset-bottom));
 }
 
 .dettaglio-corpo h1 {
@@ -873,6 +1293,57 @@ body.pagina-esplora .giorni-scroll {
 
 .campo-riga { display: flex; gap: 10px; }
 .campo-riga .campo { flex: 1; }
+
+.campo-copertina .copertina-admin {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.copertina-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.copertina-preview {
+  width: 100%;
+  max-width: 280px;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  display: block;
+  border-radius: 14px;
+  background: var(--notte-alta);
+  border: 1px solid var(--superficie-bordo);
+}
+
+.copertina-azioni {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.copertina-rimuovi {
+  color: var(--terracotta);
+}
+
+.copertina-hint {
+  font-size: 12.5px;
+  color: var(--lavanda);
+  line-height: 1.4;
+}
+
+.copertina-errore {
+  font-size: 13px;
+  color: var(--terracotta);
+  line-height: 1.4;
+}
+
+@media (min-width: 768px) {
+  .copertina-preview {
+    max-width: 220px;
+  }
+}
 
 .bottone-primario {
   background: var(--terracotta);
@@ -1025,14 +1496,32 @@ body.pagina-esplora .giorni-scroll {
   align-items: stretch;
 }
 
-.mini-mappa {
+.mini-mappa-shell {
+  position: relative;
   flex: 1;
   min-width: 0;
+  flex-shrink: 0;
   height: 220px;
+  min-height: 220px;
+}
+
+.mini-mappa {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 220px;
+  min-height: 220px;
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid var(--superficie-bordo);
   background: var(--superficie);
+}
+
+/* Leaflet sovrascrive l'altezza con 0 o 100% su Android — forza px espliciti */
+#mini-mappa.mini-mappa,
+#mini-mappa.leaflet-container {
+  height: 220px !important;
+  min-height: 220px !important;
 }
 
 .posizione-stato {
@@ -1076,6 +1565,12 @@ body.pagina-esplora .giorni-scroll {
 @media (max-width: 520px) {
   .posizione-mappa-riga {
     flex-direction: column;
+  }
+  .mini-mappa-shell {
+    flex: none;
+    width: 100%;
+    height: 220px;
+    min-height: 220px;
   }
   .posizione-stato {
     flex: none;

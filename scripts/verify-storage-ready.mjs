@@ -39,7 +39,9 @@ try {
   );
   const body = await res.json();
   checks.rulesProbeStatus = res.status;
-  checks.rulesAllowPublicRead = res.status === 404 && body?.error?.message?.includes('Object does not exist');
+  checks.rulesAllowPublicRead =
+    res.status === 404 && body?.error?.message?.includes('Object does not exist');
+  checks.rulesProbeMessage = body?.error?.message || null;
 } catch (e) {
   checks.rulesError = String(e);
 }
@@ -53,7 +55,27 @@ try {
   checks.adminError = String(e);
 }
 
+// Config client: bucket corretto
+try {
+  const cfg = await (await fetch('https://che-facim.web.app/assets/firebase-config.js')).text();
+  checks.configHasBucket = cfg.includes(`storageBucket: "${BUCKET}"`);
+} catch (e) {
+  checks.configError = String(e);
+}
+
 console.log(JSON.stringify({ project: PROJECT, bucket: BUCKET, checks }, null, 2));
 
-const ok = checks.bucketExists && checks.adminHasCopertina;
+const ok =
+  checks.bucketExists &&
+  checks.adminHasCopertina &&
+  checks.configHasBucket &&
+  checks.rulesAllowPublicRead;
+
+if (checks.bucketExists && !checks.rulesAllowPublicRead) {
+  console.error(
+    '\nRegole Storage non applicate al bucket (lettura pubblica su eventi-covers/ negata). ' +
+      'Esegui: firebase deploy --only storage --project che-facim'
+  );
+}
+
 process.exit(ok ? 0 : 1);

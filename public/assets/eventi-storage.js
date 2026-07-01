@@ -2,6 +2,7 @@
 // Upload, compressione e eliminazione copertine evento su Firebase Storage.
 
 import { app, firebaseConfig } from "./firebase-app.js";
+import { getAuth } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getStorage,
   ref,
@@ -17,6 +18,7 @@ function storage() {
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const MAX_LATO = 1920;
+const UPLOAD_TIMEOUT_MS = 120_000;
 const COMPRESS_TIMEOUT_MS = 90_000;
 const TIPI_ACCETTATI = new Set(["image/jpeg", "image/png", "image/webp"]);
 const ESTENSIONI = {
@@ -25,27 +27,44 @@ const ESTENSIONI = {
   "image/webp": "webp",
 };
 
+/** Garantisce token Auth fresco prima dell'upload (critico su mobile). */
+async function ensureAuthTokenForStorage() {
+  const user = getAuth(app).currentUser;
+  if (!user) {
+    const err = /** @type {Error & { code?: string }} */ (
+      new Error("Sessione admin scaduta. Esci e accedi di nuovo.")
+    );
+    err.code = "storage/unauthorized";
+    throw err;
+  }
+  await user.getIdToken(true);
+}
+
 /**
  * @param {import('firebase/storage').StorageReference} storageRef
  * @param {Blob} blob
  * @param {import('firebase/storage').UploadMetadata} metadata
  */
 function uploadBlob(storageRef, blob, metadata) {
-  return new Promise((resolve, reject) => {
-    const task = uploadBytesResumable(storageRef, blob, metadata);
-    task.on(
-      "state_changed",
-      null,
-      (err) => {
-        console.error("[eventi-storage] upload fallito:", err.code, err.message, {
-          bucket: firebaseConfig.storageBucket,
-          path: storageRef.fullPath,
-        });
-        reject(err);
-      },
-      () => resolve(task.snapshot)
-    );
-  });
+  return withTimeout(
+    new Promise((resolve, reject) => {
+      const task = uploadBytesResumable(storageRef, blob, metadata);
+      task.on(
+        "state_changed",
+        null,
+        (err) => {
+          console.error("[eventi-storage] upload fallito:", err.code, err.message, {
+            bucket: firebaseConfig.storageBucket,
+            path: storageRef.fullPath,
+          });
+          reject(err);
+        },
+        () => resolve(task.snapshot)
+      );
+    }),
+    UPLOAD_TIMEOUT_MS,
+    "Upload copertina troppo lento. Controlla la connessione e riprova."
+  );
 }
 
 /**
@@ -254,6 +273,8 @@ export async function caricaCopertinaEvento(file, eventoId, opts = {}) {
   if (!validazione.valido) {
     throw new Error(validazione.messaggio);
   }
+
+  await ensureAuthTokenForStorage();
 
   opts.onPhase?.("compressione");
   const { blob, contentType, ext } = await comprimiImmagineEvento(file);

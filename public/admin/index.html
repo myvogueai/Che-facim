@@ -187,7 +187,7 @@
       caricaCopertinaEvento,
       eliminaCopertinaDaUrl,
       isUrlStorageCopertina,
-    } from '../assets/eventi-storage.js?v=8';
+    } from '../assets/eventi-storage.js?v=9';
     import { LocationPicker } from '../assets/location/location-picker.js?v=8';
     import { app } from '../assets/firebase-app.js';
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -493,7 +493,7 @@
         console.error(err);
         let msg = err.message || 'Errore sconosciuto';
         if (err.code === 'storage/unauthorized') {
-          msg = 'Upload copertina negato: sessione admin scaduta. Esci e accedi di nuovo.';
+          msg = 'Upload copertina negato: sessione admin scaduta o regole Storage non applicate. Esci, riaccedi e riprova.';
         } else if (err.code === 'storage/retry-limit-exceeded' || /404|not found|bucket/i.test(msg)) {
           msg = 'Storage Firebase non configurato (bucket assente). Abilita Storage in Console Firebase.';
         }

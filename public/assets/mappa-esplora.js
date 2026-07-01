@@ -73,6 +73,7 @@ export class MappaEsplora {
     this._scrollUnlockTimer = null;
     this._scrollRaf = 0;
     this._ultimoPanId = null;
+    this._caroselloDirty = false;
     this._hasScrollEnd = "onscrollend" in window;
     this._caroselloPointer = { moved: false };
     this._caroselloDrag = {
@@ -267,12 +268,17 @@ export class MappaEsplora {
     }
 
     this._syncVistaModal();
+    this._renderCarosello();
     if (this._idSelezionato) {
       this._scrollAllaCardCarosello(this._idSelezionato, false);
     }
     requestAnimationFrame(() => {
       this.mappaModal?.invalidateSize();
       this._syncVistaModal();
+      this._renderCarosello();
+      if (this._idSelezionato) {
+        this._scrollAllaCardCarosello(this._idSelezionato, false);
+      }
     });
   }
 
@@ -457,6 +463,12 @@ export class MappaEsplora {
   _renderCarosello() {
     if (!this.caroselloEl) return;
 
+    if (!this._modalAperta) {
+      this._caroselloDirty = true;
+      return;
+    }
+    this._caroselloDirty = false;
+
     if (this._eventiVisibili.length === 0) {
       this.caroselloEl.innerHTML = `
         <div class="carosello-vuoto">
@@ -477,11 +489,12 @@ export class MappaEsplora {
   _htmlCard(ev, opts = {}) {
     const { carousel = false } = opts;
     const cat = ev.categoria || "altro";
-    const prezzoRaw = ev.prezzo || "Gratis";
+    const prezzoRaw = ev.prezzo ?? "Gratis";
+    const prezzoTesto = String(prezzoRaw);
     const gratis =
-      prezzoRaw.toLowerCase().includes("gratis") ||
-      prezzoRaw.toLowerCase().includes("gratuit");
-    const prezzoLabel = gratis ? "Gratis" : prezzoRaw;
+      prezzoTesto.toLowerCase().includes("gratis") ||
+      prezzoTesto.toLowerCase().includes("gratuit");
+    const prezzoLabel = gratis ? "Gratis" : prezzoTesto;
     const attivo = ev.id === this._idSelezionato ? " attiva" : "";
     const href = `evento.html?id=${encodeURIComponent(ev.id)}`;
     const labelCat = this._labelCategoria[cat] || "Evento";

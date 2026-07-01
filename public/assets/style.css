@@ -722,7 +722,7 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 500;
+  z-index: 1000;
   padding: 24px 0 max(14px, env(safe-area-inset-bottom));
   background: linear-gradient(to top, var(--notte) 78%, rgba(15, 13, 20, 0.55) 92%, transparent);
 }
@@ -888,6 +888,7 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
   inset: 0;
   width: 100%;
   height: 100%;
+  z-index: 1;
 }
 
 .cerca-zona-bottone {

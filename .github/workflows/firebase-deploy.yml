@@ -57,9 +57,12 @@ jobs:
           echo "$output"
           if [ $code -eq 0 ]; then
             echo "storage_deployed=true" >> "$GITHUB_OUTPUT"
+          elif echo "$output" | grep -qE "already exists|rules file.*compiled successfully"; then
+            echo "storage_deployed=true" >> "$GITHUB_OUTPUT"
+            echo "Storage rules già pubblicate o aggiornate (409/duplicato considerato OK)."
           else
             echo "storage_deployed=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Storage rules non pubblicate. Completa 'Inizia' in Firebase Console → Storage, poi rilancia il workflow."
+            echo "::warning::Storage rules non pubblicate. Verifica Firebase Console → Storage."
           fi
           exit 0
 

@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=5" />
+<link rel="stylesheet" href="assets/style.css?v=10" />
 </head>
 <body class="pagina-home">
 
@@ -21,7 +21,10 @@
     </div>
   </header>
 
-  <div class="giorni-scroll" id="giorni-scroll"></div>
+  <div class="giorni-barra">
+    <p class="giorni-mese" id="giorni-mese" aria-live="polite"></p>
+    <div class="giorni-scroll" id="giorni-scroll"></div>
+  </div>
 
   <div class="filtri-bar filtri-bar-compatta">
     <button class="filtri-bottone filtri-bottone-pieno" id="bottone-filtra" type="button">
@@ -102,7 +105,12 @@
     import { MappaEsplora } from './assets/mappa-esplora.js?v=5';
 
     const NOMI_GIORNI = ["Dom","Lun","Mar","Mer","Gio","Ven","Sab"];
+    const NOMI_MESI = [
+      "Gennaio","Febbraio","Marzo","Aprile","Maggio","Giugno",
+      "Luglio","Agosto","Settembre","Ottobre","Novembre","Dicembre"
+    ];
     const contenitoreGiorni = document.getElementById('giorni-scroll');
+    const etichettaMeseEl = document.getElementById('giorni-mese');
     const contatoreEl = document.getElementById('contatore-eventi');
     const bottoneFiltra = document.getElementById('bottone-filtra');
     const chipFiltroAttivo = document.getElementById('chip-filtro-attivo');
@@ -117,13 +125,47 @@
     giornoSelezionato.setHours(0, 0, 0, 0);
     let categoriaAttiva = null;
 
-    const giorni = [];
-    for (let i = 0; i < 14; i++) {
-      const g = new Date();
-      g.setDate(g.getDate() + i);
-      g.setHours(0, 0, 0, 0);
-      giorni.push(g);
+    let giorni = [];
+    let chiaveCalendarioBarra = '';
+
+    function oggiMezzanotte() {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      return d;
     }
+
+    function costruisciGiorniMeseCorrente() {
+      const inizio = oggiMezzanotte();
+      const fine = new Date(inizio.getFullYear(), inizio.getMonth() + 1, 0);
+      fine.setHours(0, 0, 0, 0);
+      const lista = [];
+      for (let g = new Date(inizio); g <= fine; g.setDate(g.getDate() + 1)) {
+        lista.push(new Date(g));
+      }
+      return lista;
+    }
+
+    function aggiornaEtichettaMese(riferimento) {
+      const d = riferimento || oggiMezzanotte();
+      etichettaMeseEl.textContent = `${NOMI_MESI[d.getMonth()]} ${d.getFullYear()}`.toUpperCase();
+    }
+
+    function assicuraGiorniAggiornati() {
+      const oggi = oggiMezzanotte();
+      const chiave = `${oggi.getFullYear()}-${oggi.getMonth()}-${oggi.getDate()}`;
+      const cambiato = chiave !== chiaveCalendarioBarra;
+      if (cambiato) {
+        chiaveCalendarioBarra = chiave;
+        giorni = costruisciGiorniMeseCorrente();
+        if (!giorni.some((g) => g.getTime() === giornoSelezionato.getTime())) {
+          giornoSelezionato = new Date(oggi);
+        }
+        aggiornaEtichettaMese(oggi);
+      }
+      return cambiato;
+    }
+
+    assicuraGiorniAggiornati();
 
     function formattaOrario(ev) {
       if (ev.orario) return ev.orario;
@@ -155,6 +197,7 @@
     window.addEventListener('load', () => esplora.ridimensiona());
 
     function renderGiorni() {
+      assicuraGiorniAggiornati();
       contenitoreGiorni.innerHTML = '';
       giorni.forEach(g => {
         const attivo = g.getTime() === giornoSelezionato.getTime();
@@ -174,6 +217,19 @@
         ?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     }
     renderGiorni();
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && assicuraGiorniAggiornati()) {
+        renderGiorni();
+        caricaEventi();
+      }
+    });
+    setInterval(() => {
+      if (assicuraGiorniAggiornati()) {
+        renderGiorni();
+        caricaEventi();
+      }
+    }, 60_000);
 
     function renderFiltriSheet() {
       filtriSheetOpzioni.innerHTML = [

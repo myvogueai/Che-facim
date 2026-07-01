@@ -68,11 +68,65 @@ export class LocationPicker {
     this._setupSpinner();
     this._bindEvents();
     this._bindResize();
+    this._setupDebugOverlay();
     this._aggiornaStato("vuoto");
   }
 
+  /** DEBUG TEMP — overlay diagnostico su #mini-mappa (rimuovere dopo test Android) */
+  _setupDebugOverlay() {
+    const wrap = document.createElement("div");
+    wrap.className = "mini-mappa-debug-wrap";
+    const parent = this.mappaEl.parentNode;
+    parent.insertBefore(wrap, this.mappaEl);
+    wrap.appendChild(this.mappaEl);
+
+    this.debugOverlay = document.createElement("pre");
+    this.debugOverlay.className = "mini-mappa-debug-overlay";
+    this.debugOverlay.setAttribute("aria-hidden", "true");
+    wrap.appendChild(this.debugOverlay);
+
+    this._updateDebugOverlay();
+    this._debugInterval = setInterval(() => this._updateDebugOverlay(), 400);
+  }
+
+  /** DEBUG TEMP */
+  _updateDebugOverlay() {
+    if (!this.debugOverlay || !this.mappaEl) return;
+
+    const el = this.mappaEl;
+    const cs = getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+    const leafletContainer =
+      el.classList.contains("leaflet-container") || !!el.querySelector(".leaflet-container");
+
+    this.debugOverlay.textContent = [
+      `DEBUG mini-mappa · ${new Date().toLocaleTimeString()}`,
+      `offsetWidth: ${el.offsetWidth}`,
+      `offsetHeight: ${el.offsetHeight}`,
+      `getBoundingClientRect(): ${JSON.stringify({
+        x: Math.round(rect.x),
+        y: Math.round(rect.y),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        top: Math.round(rect.top),
+        left: Math.round(rect.left),
+        right: Math.round(rect.right),
+        bottom: Math.round(rect.bottom),
+      })}`,
+      `display: ${cs.display}`,
+      `visibility: ${cs.visibility}`,
+      `height: ${cs.height}`,
+      `children: ${el.childElementCount}`,
+      `this.mappa != null: ${this.mappa != null}`,
+      `.leaflet-container: ${leafletContainer}`,
+    ].join("\n");
+  }
+
   _bindResize() {
-    const onResize = () => this.invalidateSize();
+    const onResize = () => {
+      this.invalidateSize();
+      this._updateDebugOverlay();
+    };
     window.addEventListener("resize", onResize);
     window.addEventListener("orientationchange", onResize);
   }
@@ -352,8 +406,12 @@ export class LocationPicker {
 
     requestAnimationFrame(() => {
       this.mappa?.invalidateSize();
-      requestAnimationFrame(() => this.mappa?.invalidateSize());
+      requestAnimationFrame(() => {
+        this.mappa?.invalidateSize();
+        this._updateDebugOverlay();
+      });
     });
+    this._updateDebugOverlay();
   }
 
   _posizionaMarker(lat, lng, centra = false) {
@@ -411,6 +469,7 @@ export class LocationPicker {
     this.statoEl.className = `posizione-stato posizione-stato--${stato}`;
     const icona = stato === "trovato" ? "✓" : "⚠️";
     this.statoEl.innerHTML = `<span class="posizione-stato-icona">${icona}</span> ${messaggi[stato]}`;
+    this._updateDebugOverlay();
   }
 
   /**
@@ -517,7 +576,11 @@ export class LocationPicker {
 
   invalidateSize() {
     if (this.mappa) {
-      requestAnimationFrame(() => this.mappa.invalidateSize());
+      requestAnimationFrame(() => {
+        this.mappa.invalidateSize();
+        this._updateDebugOverlay();
+      });
     }
+    this._updateDebugOverlay();
   }
 }

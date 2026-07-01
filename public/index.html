@@ -105,11 +105,16 @@
       return d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
     }
 
-    function aggiornaContatore(n) {
-      if (n === 0) {
-        contatoreEl.textContent = 'Nessun evento sulla mappa';
+    function aggiornaContatore(stats) {
+      const { carosello = 0, mappa = 0, totaliGiorno = 0 } = stats;
+      if (totaliGiorno === 0) {
+        contatoreEl.textContent = 'Nessun evento per questo giorno';
+      } else if (carosello === 0) {
+        contatoreEl.textContent = 'Nessun evento con i filtri attivi';
+      } else if (mappa === 0) {
+        contatoreEl.textContent = `${carosello} ${carosello === 1 ? 'evento' : 'eventi'} · nessuno sulla mappa`;
       } else {
-        contatoreEl.textContent = `${n} ${n === 1 ? 'evento sulla mappa' : 'eventi sulla mappa'}`;
+        contatoreEl.textContent = `${mappa} ${mappa === 1 ? 'evento sulla mappa' : 'eventi sulla mappa'}`;
       }
     }
 

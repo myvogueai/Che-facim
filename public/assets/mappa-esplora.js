@@ -23,7 +23,7 @@ export class MappaEsplora {
    * @param {HTMLElement} opts.mappaEl
    * @param {HTMLElement} opts.caroselloEl
    * @param {HTMLButtonElement} opts.cercaZonaBtn
-   * @param {(n: number) => void} [opts.onConteggio]
+   * @param {(stats: { carosello: number, mappa: number, totaliGiorno: number }) => void} [opts.onConteggio]
    */
   constructor(opts) {
     this.mappaEl = opts.mappaEl;
@@ -36,6 +36,7 @@ export class MappaEsplora {
     /** @type {Map<string, { marker: import('leaflet').Marker, evento: object }>} */
     this._markers = new Map();
 
+    this._eventiGiornoRaw = [];
     this._eventiGiorno = [];
     this._eventiVisibili = [];
     this._categoriaFiltro = null;
@@ -195,6 +196,7 @@ export class MappaEsplora {
 
   /** @param {object[]} eventi */
   impostaEventi(eventi) {
+    this._eventiGiornoRaw = eventi;
     this._eventiGiorno = eventi.filter((e) => e.lat && e.lng);
     this._zonaConfermata = false;
     this._mappaSpostata = false;
@@ -224,20 +226,54 @@ export class MappaEsplora {
   }
 
   _eventiFiltrati() {
-    let lista = this._eventiGiorno;
+    let lista = this._eventiGiornoRaw;
     if (this._categoriaFiltro) {
       lista = lista.filter((e) => e.categoria === this._categoriaFiltro);
     }
     if (this._zonaConfermata && this.mappa) {
       const bounds = this.mappa.getBounds();
-      lista = lista.filter((e) => bounds.contains([e.lat, e.lng]));
+      lista = lista.filter((e) => e.lat && e.lng && bounds.contains([e.lat, e.lng]));
     }
     return lista;
   }
 
+  _eventiConCoordinate(lista) {
+    return lista.filter((e) => e.lat && e.lng);
+  }
+
+  _messaggioVuoto() {
+    const totali = this._eventiGiornoRaw.length;
+    if (totali === 0) {
+      return "Nessun evento per questo giorno.";
+    }
+
+    let lista = this._eventiGiornoRaw;
+    if (this._categoriaFiltro) {
+      lista = lista.filter((e) => e.categoria === this._categoriaFiltro);
+      if (lista.length === 0) {
+        return "Nessun evento in questa categoria per il giorno selezionato.";
+      }
+    }
+
+    if (this._zonaConfermata && this.mappa) {
+      const bounds = this.mappa.getBounds();
+      const inZona = lista.filter((e) => e.lat && e.lng && bounds.contains([e.lat, e.lng]));
+      if (inZona.length === 0) {
+        return "Nessun evento in questa zona per il giorno selezionato.";
+      }
+    }
+
+    return "Nessun evento corrisponde ai filtri selezionati.";
+  }
+
   _applicaFiltri() {
     this._eventiVisibili = this._eventiFiltrati();
-    this.onConteggio(this._eventiVisibili.length);
+    const suMappa = this._eventiConCoordinate(this._eventiVisibili);
+    this.onConteggio({
+      carosello: this._eventiVisibili.length,
+      mappa: suMappa.length,
+      totaliGiorno: this._eventiGiornoRaw.length,
+    });
     this._renderMarkers();
     this._renderCarosello();
 
@@ -245,7 +281,7 @@ export class MappaEsplora {
       const ancoraValido = this._eventiVisibili.some((e) => e.id === this._idSelezionato);
       const id = ancoraValido ? this._idSelezionato : this._eventiVisibili[0].id;
       this.seleziona(id, {
-        centraMappa: !ancoraValido,
+        centraMappa: !ancoraValido && suMappa.some((e) => e.id === id),
         scrollCarosello: !ancoraValido,
       });
     } else {
@@ -256,13 +292,12 @@ export class MappaEsplora {
   }
 
   _adattaVista() {
-    if (!this.mappa || this._eventiVisibili.length === 0) {
+    const suMappa = this._eventiConCoordinate(this._eventiVisibili);
+    if (!this.mappa || suMappa.length === 0) {
       this.mappa?.setView(CENTRO_POTENZA, ZOOM_DEFAULT, { animate: false });
       return;
     }
-    const bounds = L.latLngBounds(
-      this._eventiVisibili.map((e) => [e.lat, e.lng])
-    );
+    const bounds = L.latLngBounds(suMappa.map((e) => [e.lat, e.lng]));
     if (bounds.isValid()) {
       this._muoviProgrammatico = true;
       this.mappa.fitBounds(bounds, { padding: [48, 48], maxZoom: 13, animate: true });
@@ -275,7 +310,7 @@ export class MappaEsplora {
     this._markers.forEach(({ marker }) => this.mappa.removeLayer(marker));
     this._markers.clear();
 
-    this._eventiVisibili.forEach((ev) => {
+    this._eventiConCoordinate(this._eventiVisibili).forEach((ev) => {
       const marker = L.marker([ev.lat, ev.lng], {
         icon: iconaMarker(false),
         interactive: true,
@@ -305,7 +340,7 @@ export class MappaEsplora {
     if (this._eventiVisibili.length === 0) {
       this.caroselloEl.innerHTML = `
         <div class="carosello-vuoto">
-          <p>Nessun evento in questa zona per il giorno selezionato.</p>
+          <p>${this._escape(this._messaggioVuoto())}</p>
         </div>`;
       return;
     }
@@ -393,7 +428,7 @@ export class MappaEsplora {
   /** @param {string} id */
   _centraMappaSuEvento(id) {
     const ev = this._eventiVisibili.find((e) => e.id === id);
-    if (!ev || !this.mappa) return;
+    if (!ev?.lat || !ev?.lng || !this.mappa) return;
 
     this._ultimoPanId = id;
     const zoom = this.mappa.getZoom();

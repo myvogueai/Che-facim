@@ -172,6 +172,44 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .giorno-pill.attivo .label { color: rgba(255,255,255,0.9); }
 .giorno-pill.attivo .num { color: #fff; }
 
+.giorno-cambio-mese {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.giorno-cambio-mese-segno {
+  width: 1px;
+  height: 36px;
+  margin-bottom: 14px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--superficie-bordo) 20%,
+    var(--superficie-bordo) 80%,
+    transparent
+  );
+  flex-shrink: 0;
+}
+
+.giorno-cambio-mese-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.giorno-cambio-mese-etichetta {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--terracotta);
+  text-transform: uppercase;
+  white-space: nowrap;
+  line-height: 1;
+}
+
 /* ============ FILTRI ============ */
 .filtri-bar {
   display: flex;

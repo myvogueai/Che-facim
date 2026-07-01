@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/style.css?v=11" />
+<link rel="stylesheet" href="assets/style.css?v=12" />
 </head>
 <body class="pagina-home">
 
@@ -134,9 +134,9 @@
       return d;
     }
 
-    function costruisciGiorniMeseCorrente() {
+    function costruisciGiorniContinui() {
       const inizio = oggiMezzanotte();
-      const fine = new Date(inizio.getFullYear(), inizio.getMonth() + 1, 0);
+      const fine = new Date(inizio.getFullYear(), inizio.getMonth() + 2, 0);
       fine.setHours(0, 0, 0, 0);
       const lista = [];
       for (let g = new Date(inizio); g <= fine; g.setDate(g.getDate() + 1)) {
@@ -146,8 +146,16 @@
     }
 
     function aggiornaEtichettaMese(riferimento) {
-      const d = riferimento || oggiMezzanotte();
+      const d = riferimento || giornoSelezionato;
       etichettaMeseEl.textContent = `${NOMI_MESI[d.getMonth()]} ${d.getFullYear()}`.toUpperCase();
+    }
+
+    function etichettaCambioMese(giorno, giornoPrecedente) {
+      const mese = NOMI_MESI[giorno.getMonth()];
+      if (giorno.getFullYear() !== giornoPrecedente.getFullYear()) {
+        return `${mese} ${giorno.getFullYear()}`;
+      }
+      return mese;
     }
 
     function assicuraGiorniAggiornati() {
@@ -156,12 +164,12 @@
       const cambiato = chiave !== chiaveCalendarioBarra;
       if (cambiato) {
         chiaveCalendarioBarra = chiave;
-        giorni = costruisciGiorniMeseCorrente();
+        giorni = costruisciGiorniContinui();
         if (!giorni.some((g) => g.getTime() === giornoSelezionato.getTime())) {
           giornoSelezionato = new Date(oggi);
         }
-        aggiornaEtichettaMese(oggi);
       }
+      aggiornaEtichettaMese(giornoSelezionato);
       return cambiato;
     }
 
@@ -207,21 +215,50 @@
 
     window.addEventListener('load', () => esplora.ridimensiona());
 
+    function creaPillGiorno(g) {
+      const attivo = g.getTime() === giornoSelezionato.getTime();
+      const pill = document.createElement('button');
+      pill.type = 'button';
+      pill.className = 'giorno-pill' + (attivo ? ' attivo' : '');
+      pill.innerHTML = `<span class="num">${g.getDate()}</span><span class="label">${NOMI_GIORNI[g.getDay()]}</span>`;
+      pill.addEventListener('click', () => {
+        giornoSelezionato = g;
+        aggiornaEtichettaMese(g);
+        renderGiorni();
+        caricaEventi();
+      });
+      return pill;
+    }
+
     function renderGiorni() {
       assicuraGiorniAggiornati();
       contenitoreGiorni.innerHTML = '';
-      giorni.forEach(g => {
-        const attivo = g.getTime() === giornoSelezionato.getTime();
-        const pill = document.createElement('button');
-        pill.type = 'button';
-        pill.className = 'giorno-pill' + (attivo ? ' attivo' : '');
-        pill.innerHTML = `<span class="num">${g.getDate()}</span><span class="label">${NOMI_GIORNI[g.getDay()]}</span>`;
-        pill.addEventListener('click', () => {
-          giornoSelezionato = g;
-          renderGiorni();
-          caricaEventi();
-        });
-        contenitoreGiorni.appendChild(pill);
+      giorni.forEach((g, i) => {
+        const nuovoMese = i > 0 && g.getDate() === 1;
+        if (nuovoMese) {
+          const blocco = document.createElement('div');
+          blocco.className = 'giorno-cambio-mese';
+          blocco.setAttribute('role', 'presentation');
+
+          const segno = document.createElement('span');
+          segno.className = 'giorno-cambio-mese-segno';
+          segno.setAttribute('aria-hidden', 'true');
+          blocco.appendChild(segno);
+
+          const col = document.createElement('div');
+          col.className = 'giorno-cambio-mese-col';
+
+          const etichetta = document.createElement('span');
+          etichetta.className = 'giorno-cambio-mese-etichetta';
+          etichetta.textContent = etichettaCambioMese(g, giorni[i - 1]).toUpperCase();
+          col.appendChild(etichetta);
+          col.appendChild(creaPillGiorno(g));
+
+          blocco.appendChild(col);
+          contenitoreGiorni.appendChild(blocco);
+        } else {
+          contenitoreGiorni.appendChild(creaPillGiorno(g));
+        }
       });
 
       contenitoreGiorni.querySelector('.giorno-pill.attivo')

@@ -39,6 +39,7 @@ export class MappaEsplora {
    * @param {Array<{id: string, label: string}>} [opts.categorie]
    * @param {(ev: object) => string} [opts.formattaOrario]
    * @param {(n: number) => void} [opts.onConteggio]
+   * @param {() => void} [opts.onRimuoviFiltroCategoria]
    */
   constructor(opts) {
     this.mappaEl = opts.mappaEl;
@@ -47,6 +48,7 @@ export class MappaEsplora {
     this.caroselloEl = opts.caroselloEl || null;
     this.cercaZonaBtn = opts.cercaZonaBtn;
     this.onConteggio = opts.onConteggio || (() => {});
+    this.onRimuoviFiltroCategoria = opts.onRimuoviFiltroCategoria || (() => {});
 
     this._categorie = opts.categorie || CATEGORIE;
     this._labelCategoria = Object.fromEntries(
@@ -306,6 +308,31 @@ export class MappaEsplora {
     this.ridimensiona();
   }
 
+  /** @param {string|null|undefined} val */
+  _idCategoriaEvento(val) {
+    const raw = String(val || "altro").trim().toLowerCase();
+    const match = this._categorie.find(
+      (c) => c.id === raw || c.label.toLowerCase() === raw
+    );
+    return match ? match.id : raw;
+  }
+
+  /** Categorie presenti negli eventi del giorno (id Firestore, non label UI). */
+  getCategoriePresenti() {
+    const ids = new Set(
+      this._eventiGiorno.map((e) => this._idCategoriaEvento(e.categoria))
+    );
+    return this._categorie.filter((c) => ids.has(c.id));
+  }
+
+  getEventiGiornoCount() {
+    return this._eventiGiorno.length;
+  }
+
+  getCategoriaFiltro() {
+    return this._categoriaFiltro;
+  }
+
   /** @param {string|null} categoriaId */
   impostaCategoria(categoriaId) {
     this._categoriaFiltro = categoriaId;
@@ -326,7 +353,9 @@ export class MappaEsplora {
   _eventiFiltrati() {
     let lista = this._eventiGiorno;
     if (this._categoriaFiltro) {
-      lista = lista.filter((e) => e.categoria === this._categoriaFiltro);
+      lista = lista.filter(
+        (e) => this._idCategoriaEvento(e.categoria) === this._categoriaFiltro
+      );
     }
     const mappaAttiva = this._modalAperta && this.mappaModal ? this.mappaModal : this.mappa;
     if (this._zonaConfermata && mappaAttiva) {
@@ -447,6 +476,18 @@ export class MappaEsplora {
 
   _renderLista() {
     if (this._eventiVisibili.length === 0) {
+      if (this._categoriaFiltro && this._eventiGiorno.length > 0) {
+        this.listaEl.innerHTML = `
+        <div class="stato-vuoto">
+          <p>Nessun evento trovato per il filtro selezionato.</p>
+          <button type="button" class="filtri-bottone bottone-rimuovi-filtro">Rimuovi filtro</button>
+        </div>`;
+        this.listaEl
+          .querySelector(".bottone-rimuovi-filtro")
+          ?.addEventListener("click", () => this.onRimuoviFiltroCategoria());
+        return;
+      }
+
       this.listaEl.innerHTML = `
         <div class="stato-vuoto">
           <p>Nessun evento per il giorno selezionato.</p>

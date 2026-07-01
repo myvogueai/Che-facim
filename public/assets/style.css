@@ -336,6 +336,13 @@ body.pagina-esplora .giorni-scroll {
   font-weight: 600;
 }
 
+.filtro-opzione--vuoto {
+  cursor: default;
+  text-align: center;
+  color: var(--lavanda);
+  font-size: 14px;
+}
+
 /* ============ PAGINA HOME (lista premium + mappa flottante) ============ */
 body.pagina-home {
   min-height: 100vh;
@@ -397,6 +404,13 @@ body.pagina-home .filtri-bottone-pieno {
   font-size: 13px;
   margin-top: 8px;
   opacity: 0.75;
+}
+
+.bottone-rimuovi-filtro {
+  margin-top: 16px;
+  width: auto;
+  display: inline-flex;
+  align-self: center;
 }
 
 .stato-vuoto-loading p {
@@ -1162,6 +1176,7 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
 
 .dettaglio-corpo {
   padding: 20px;
+  padding-bottom: calc(100px + env(safe-area-inset-bottom));
 }
 
 .dettaglio-corpo h1 {

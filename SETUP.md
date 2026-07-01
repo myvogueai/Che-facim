@@ -64,7 +64,19 @@ Dopo il claim, l'admin deve fare logout e login su `/admin/` per refreshare il t
 3. Copia l'oggetto `firebaseConfig`
 4. Incollalo in `public/assets/firebase-config.js`
 
-## 6. Pubblica regole e indici
+## 6. Attiva Storage (copertine evento)
+
+1. Menu laterale → Build → **Storage** → "Inizia"
+2. Scegli la regione (consigliata: `eur3` come Firestore)
+3. Pubblica le regole con:
+
+```bash
+firebase deploy --only storage --project che-facim
+```
+
+Le regole sono in `storage.rules` (lettura pubblica, scrittura solo admin).
+
+## 7. Pubblica regole Firestore e indici
 
 ```bash
 firebase login
@@ -73,7 +85,7 @@ firebase deploy --only firestore:rules,firestore:indexes --project che-facim
 
 Oppure dalla Console Firebase → Firestore → tab "Regole", incolla `firestore.rules`.
 
-## 7. Deploy dell'app (hosting)
+## 8. Deploy dell'app (hosting)
 
 ```bash
 firebase deploy --only hosting --project che-facim
@@ -82,18 +94,20 @@ firebase deploy --only hosting --project che-facim
 - App pubblica: `https://che-facim.web.app`
 - Admin: `https://che-facim.web.app/admin/`
 
-## 8. Primo test
+## 9. Primo test
 
 1. Apri `/admin/`, accedi con l'account admin
-2. Inserisci un evento di prova (coordinate: Google Maps → tasto destro → copia coordinate)
-3. Apri la home `/` e verifica che l'evento appaia nella data corretta
-4. Apri un evento, salva nei preferiti (cuore), controlla `/preferiti.html`
+2. Inserisci un evento di prova con **copertina** (pulsante "Seleziona immagine" nel form)
+3. Coordinate: Google Maps → tasto destro → copia coordinate
+4. Apri la home `/` e verifica che l'evento e la locandina appaiano
+5. Apri la Mappa e verifica il carosello con copertina
+6. Apri il dettaglio evento e salva nei preferiti (cuore), controlla `/preferiti.html`
 
 Se il CRUD admin fallisce con "permission denied", l'UID non è in whitelist e il custom claim non è impostato.
 
 ## Note operative
 
-- **Locandine**: URL diretto nel campo immagine (Imgur, Firebase Storage, ecc.)
+- **Copertine**: upload da admin → Firebase Storage (`eventi-covers/`), URL in `immagine_url` su Firestore. Compressione automatica (max 1920px, WebP/JPEG ~84%).
 - **Contatti in About**: sostituisci `39XXXXXXXXXX` e `info@chefacim.it` in `about.html`
 - **Credenziali admin**: non condividere pubblicamente; protezione aggiuntiva = rules Firestore (non solo URL `/admin/`)
 - **Preferiti utente**: restano in `localStorage` (chiave `lucania_tonight_preferiti`), nessun dato su Firestore

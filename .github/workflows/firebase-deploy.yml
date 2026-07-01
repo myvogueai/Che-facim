@@ -45,8 +45,25 @@ jobs:
             --non-interactive
 
       - name: Deploy Storage rules
+        id: deploy-storage
+        continue-on-error: true
         run: |
-          npx firebase-tools@15.22.3 deploy \
+          set +e
+          output=$(npx firebase-tools@15.22.3 deploy \
             --only storage \
             --project che-facim \
-            --non-interactive
+            --non-interactive 2>&1)
+          code=$?
+          echo "$output"
+          if [ $code -eq 0 ]; then
+            echo "storage_deployed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "storage_deployed=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Storage rules non pubblicate. Completa 'Inizia' in Firebase Console → Storage, poi rilancia il workflow."
+          fi
+          exit 0
+
+      - name: Verifica deploy Storage
+        if: steps.deploy-storage.outputs.storage_deployed != 'true'
+        run: |
+          echo "::warning::Upload copertine admin non attivo finché Storage non è configurato e le rules non sono deployate."

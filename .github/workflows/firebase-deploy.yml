@@ -45,8 +45,16 @@ jobs:
             --non-interactive
 
       - name: Deploy Storage rules
+        continue-on-error: true
         run: |
-          npx firebase-tools@15.22.3 deploy \
+          set +e
+          output=$(npx firebase-tools@15.22.3 deploy \
             --only storage \
             --project che-facim \
-            --non-interactive
+            --non-interactive 2>&1)
+          code=$?
+          echo "$output"
+          if [ $code -ne 0 ]; then
+            echo "::warning::Deploy Storage fallito. Abilita Firebase Storage nella console GCP se non ancora attivo."
+          fi
+          exit 0

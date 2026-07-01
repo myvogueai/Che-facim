@@ -205,6 +205,10 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   white-space: nowrap;
 }
 
+.filtri-chip-attiva[hidden] {
+  display: none !important;
+}
+
 /* ============ MAPPA ============ */
 #mappa {
   width: 100%;

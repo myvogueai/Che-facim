@@ -58,23 +58,6 @@ export function buildQueryRicerca(parsed, comuneExtra) {
 }
 
 /**
- * Confronto comune: "Potenza" non deve matchare "Potenza Picena".
- * @param {string} trovato
- * @param {string} richiesto
- */
-export function comuneAccetta(trovato, richiesto) {
-  if (!richiesto?.trim()) return true;
-  if (!trovato?.trim()) return false;
-  const norm = (s) =>
-    s
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/\p{M}/gu, "")
-      .trim();
-  return norm(trovato) === norm(richiesto);
-}
-
-/**
  * Indirizzo formattato con civico (per il campo anche se il geocoder non lo risolve).
  * @param {string} via
  * @param {string|null} civico

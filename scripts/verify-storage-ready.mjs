@@ -40,7 +40,9 @@ try {
   const body = await res.json();
   checks.rulesProbeStatus = res.status;
   checks.rulesAllowPublicRead =
-    res.status === 404 && body?.error?.message?.includes('Object does not exist');
+    res.status === 404 &&
+    (body?.error?.message?.includes('Object does not exist') ||
+      body?.error?.message?.includes('Not Found'));
   checks.rulesProbeMessage = body?.error?.message || null;
 } catch (e) {
   checks.rulesError = String(e);

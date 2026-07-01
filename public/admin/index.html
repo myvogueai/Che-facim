@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Admin — Che facim'?</title>
 <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/style.css?v=debug-map-1" />
+<link rel="stylesheet" href="../assets/style.css?v=6" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 </head>
@@ -91,7 +91,9 @@
       <input type="hidden" id="lng" />
 
       <div class="posizione-mappa-riga">
-        <div id="mini-mappa" class="mini-mappa" aria-label="Anteprima posizione sulla mappa"></div>
+        <div class="mini-mappa-shell">
+          <div id="mini-mappa" class="mini-mappa" aria-label="Anteprima posizione sulla mappa"></div>
+        </div>
         <div id="posizione-stato" class="posizione-stato posizione-stato--vuoto" aria-live="polite">
           <span class="posizione-stato-icona">⚠️</span> Inserisci un indirizzo per trovare la posizione
         </div>
@@ -186,7 +188,7 @@
       eliminaCopertinaDaUrl,
       isUrlStorageCopertina,
     } from '../assets/eventi-storage.js';
-    import { LocationPicker } from '../assets/location/location-picker.js?v=debug-map-1';
+    import { LocationPicker } from '../assets/location/location-picker.js?v=6';
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const auth = getAuth();

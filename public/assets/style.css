@@ -1176,6 +1176,57 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
 .campo-riga { display: flex; gap: 10px; }
 .campo-riga .campo { flex: 1; }
 
+.campo-copertina .copertina-admin {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.copertina-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.copertina-preview {
+  width: 100%;
+  max-width: 280px;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  display: block;
+  border-radius: 14px;
+  background: var(--notte-alta);
+  border: 1px solid var(--superficie-bordo);
+}
+
+.copertina-azioni {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.copertina-rimuovi {
+  color: var(--terracotta);
+}
+
+.copertina-hint {
+  font-size: 12.5px;
+  color: var(--lavanda);
+  line-height: 1.4;
+}
+
+.copertina-errore {
+  font-size: 13px;
+  color: var(--terracotta);
+  line-height: 1.4;
+}
+
+@media (min-width: 768px) {
+  .copertina-preview {
+    max-width: 220px;
+  }
+}
+
 .bottone-primario {
   background: var(--terracotta);
   color: #fff;

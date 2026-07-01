@@ -127,9 +127,27 @@
       </div>
     </div>
 
-    <div class="campo">
-      <label for="immagine_url">URL locandina/immagine</label>
-      <input type="url" id="immagine_url" placeholder="https://..." />
+    <div class="campo campo-copertina">
+      <label>Copertina evento</label>
+      <input type="hidden" id="immagine_url" />
+      <input
+        type="file"
+        id="copertina-file"
+        accept="image/jpeg,image/png,image/webp"
+        hidden
+      />
+      <div class="copertina-admin">
+        <div class="copertina-preview-wrap" id="copertina-preview-wrap" hidden>
+          <img class="copertina-preview" id="copertina-preview" alt="Anteprima copertina evento" />
+          <div class="copertina-azioni">
+            <button type="button" class="filtri-bottone" id="copertina-sostituisci">Sostituisci</button>
+            <button type="button" class="filtri-bottone copertina-rimuovi" id="copertina-rimuovi">Rimuovi</button>
+          </div>
+        </div>
+        <button type="button" class="filtri-bottone" id="copertina-seleziona">Seleziona immagine</button>
+        <p class="copertina-hint">JPG, JPEG, PNG o WEBP · massimo 5 MB</p>
+        <p class="copertina-errore" id="copertina-errore" hidden></p>
+      </div>
     </div>
 
     <div class="campo">
@@ -162,6 +180,12 @@
 
   <script type="module">
     import { creaEvento, aggiornaEvento, eliminaEvento, getTuttiEventiAdmin } from '../assets/eventi-data.js';
+    import {
+      validaImmagineEvento,
+      caricaCopertinaEvento,
+      eliminaCopertinaDaUrl,
+      isUrlStorageCopertina,
+    } from '../assets/eventi-storage.js';
     import { LocationPicker } from '../assets/location/location-picker.js';
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
@@ -211,6 +235,116 @@
     const bottoneSalva = document.getElementById('bottone-salva');
     const bottoneAnnulla = document.getElementById('bottone-annulla-modifica');
 
+    const copertinaFileEl = document.getElementById('copertina-file');
+    const copertinaPreviewWrap = document.getElementById('copertina-preview-wrap');
+    const copertinaPreview = document.getElementById('copertina-preview');
+    const copertinaSeleziona = document.getElementById('copertina-seleziona');
+    const copertinaSostituisci = document.getElementById('copertina-sostituisci');
+    const copertinaRimuovi = document.getElementById('copertina-rimuovi');
+    const copertinaErrore = document.getElementById('copertina-errore');
+    const immagineUrlEl = document.getElementById('immagine_url');
+
+    let fileCopertinaPendente = null;
+    let copertinaRimossa = false;
+    let anteprimaLocaleUrl = null;
+
+    function mostraErroreCopertina(msg) {
+      if (!msg) {
+        copertinaErrore.hidden = true;
+        copertinaErrore.textContent = '';
+        return;
+      }
+      copertinaErrore.hidden = false;
+      copertinaErrore.textContent = msg;
+    }
+
+    function revocaAnteprimaLocale() {
+      if (anteprimaLocaleUrl) {
+        URL.revokeObjectURL(anteprimaLocaleUrl);
+        anteprimaLocaleUrl = null;
+      }
+    }
+
+    function aggiornaUiCopertina(url = '') {
+      revocaAnteprimaLocale();
+      immagineUrlEl.value = url || '';
+
+      if (url) {
+        copertinaPreview.src = url;
+        copertinaPreviewWrap.hidden = false;
+        copertinaSeleziona.hidden = true;
+      } else {
+        copertinaPreview.removeAttribute('src');
+        copertinaPreviewWrap.hidden = true;
+        copertinaSeleziona.hidden = false;
+      }
+    }
+
+    function resetCopertina() {
+      fileCopertinaPendente = null;
+      copertinaRimossa = false;
+      copertinaFileEl.value = '';
+      mostraErroreCopertina('');
+      aggiornaUiCopertina('');
+    }
+
+    function impostaCopertinaEsistente(url) {
+      fileCopertinaPendente = null;
+      copertinaRimossa = false;
+      copertinaFileEl.value = '';
+      mostraErroreCopertina('');
+      aggiornaUiCopertina(url || '');
+    }
+
+    copertinaSeleziona.addEventListener('click', () => copertinaFileEl.click());
+    copertinaSostituisci.addEventListener('click', () => copertinaFileEl.click());
+
+    copertinaRimuovi.addEventListener('click', () => {
+      fileCopertinaPendente = null;
+      copertinaRimossa = true;
+      copertinaFileEl.value = '';
+      mostraErroreCopertina('');
+      aggiornaUiCopertina('');
+    });
+
+    copertinaFileEl.addEventListener('change', () => {
+      const file = copertinaFileEl.files?.[0];
+      if (!file) return;
+
+      const validazione = validaImmagineEvento(file);
+      if (!validazione.valido) {
+        mostraErroreCopertina(validazione.messaggio);
+        copertinaFileEl.value = '';
+        return;
+      }
+
+      mostraErroreCopertina('');
+      fileCopertinaPendente = file;
+      copertinaRimossa = false;
+      revocaAnteprimaLocale();
+      anteprimaLocaleUrl = URL.createObjectURL(file);
+      copertinaPreview.src = anteprimaLocaleUrl;
+      copertinaPreviewWrap.hidden = false;
+      copertinaSeleziona.hidden = true;
+    });
+
+    async function gestisciCopertinaEvento(eventoId, urlEsistente) {
+      if (copertinaRimossa && urlEsistente) {
+        await eliminaCopertinaDaUrl(urlEsistente);
+        return '';
+      }
+
+      if (!fileCopertinaPendente) {
+        return urlEsistente || '';
+      }
+
+      const nuovoUrl = await caricaCopertinaEvento(fileCopertinaPendente, eventoId);
+      if (urlEsistente && urlEsistente !== nuovoUrl && isUrlStorageCopertina(urlEsistente)) {
+        await eliminaCopertinaDaUrl(urlEsistente);
+      }
+      return nuovoUrl;
+    }
+
     const locationPicker = new LocationPicker({
       localeEl: document.getElementById('locale'),
       indirizzoEl: document.getElementById('indirizzo'),
@@ -258,6 +392,7 @@
       document.getElementById('evento-id').value = '';
       document.getElementById('prezzo').value = 'Gratis';
       locationPicker.reset();
+      resetCopertina();
       bottoneSalva.textContent = 'Pubblica evento';
       bottoneAnnulla.style.display = 'none';
     }
@@ -281,6 +416,7 @@
       const dataVal = document.getElementById('data').value;
       const orarioVal = document.getElementById('orario').value;
       const posizione = locationPicker.getDati();
+      const urlCopertinaEsistente = immagineUrlEl.value.trim();
 
       const dati = {
         titolo: document.getElementById('titolo').value.trim(),
@@ -295,7 +431,7 @@
         orario: orarioVal,
         categoria: document.getElementById('categoria').value,
         prezzo: document.getElementById('prezzo').value.trim() || 'Gratis',
-        immagine_url: document.getElementById('immagine_url').value.trim(),
+        immagine_url: urlCopertinaEsistente,
         descrizione: document.getElementById('descrizione').value.trim(),
         contatti: document.getElementById('contatti').value.trim(),
         in_evidenza: document.getElementById('in_evidenza').checked,
@@ -305,9 +441,18 @@
       try {
         if (id) {
           await aggiornaEvento(id, dati);
+          const immagineFinale = await gestisciCopertinaEvento(id, urlCopertinaEsistente);
+          if (immagineFinale !== urlCopertinaEsistente) {
+            await aggiornaEvento(id, { immagine_url: immagineFinale });
+          }
           mostraToast('Evento aggiornato ✓');
         } else {
-          await creaEvento(dati);
+          dati.immagine_url = '';
+          const ref = await creaEvento(dati);
+          const immagineFinale = await gestisciCopertinaEvento(ref.id, '');
+          if (immagineFinale) {
+            await aggiornaEvento(ref.id, { immagine_url: immagineFinale });
+          }
           mostraToast('Evento pubblicato ✓');
         }
         resetForm();
@@ -316,7 +461,7 @@
         mostraToast('Errore: ' + err.message, true);
       } finally {
         bottoneSalva.disabled = false;
-        bottoneSalva.textContent = 'Pubblica evento';
+        bottoneSalva.textContent = id ? 'Salva modifiche' : 'Pubblica evento';
       }
     });
 
@@ -379,7 +524,7 @@
             document.getElementById('orario').value = ev.orario || d.toTimeString().slice(0,5);
             document.getElementById('categoria').value = ev.categoria || 'altro';
             document.getElementById('prezzo').value = ev.prezzo || 'Gratis';
-            document.getElementById('immagine_url').value = ev.immagine_url || '';
+            impostaCopertinaEsistente(ev.immagine_url || '');
             document.getElementById('descrizione').value = ev.descrizione || '';
             document.getElementById('contatti').value = ev.contatti || '';
             document.getElementById('in_evidenza').checked = !!ev.in_evidenza;

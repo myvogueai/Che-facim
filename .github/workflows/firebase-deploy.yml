@@ -43,3 +43,10 @@ jobs:
             --only firestore:rules,firestore:indexes \
             --project che-facim \
             --non-interactive
+
+      - name: Deploy Storage rules
+        run: |
+          npx firebase-tools@15.22.3 deploy \
+            --only storage \
+            --project che-facim \
+            --non-interactive

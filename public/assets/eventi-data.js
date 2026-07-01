@@ -11,12 +11,14 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  getDoc,
   query,
   where,
   orderBy,
   Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
+import { eliminaCopertinaDaUrl } from "./eventi-storage.js";
 
 const app = initializeApp(firebaseConfig);
 export { app };
@@ -71,7 +73,13 @@ export async function aggiornaEvento(id, dati) {
 }
 
 export async function eliminaEvento(id) {
-  return deleteDoc(doc(db, COLLEZIONE, id));
+  const refEvento = doc(db, COLLEZIONE, id);
+  const snap = await getDoc(refEvento);
+  const immagine_url = snap.exists() ? snap.data().immagine_url || "" : "";
+  await deleteDoc(refEvento);
+  if (immagine_url) {
+    await eliminaCopertinaDaUrl(immagine_url);
+  }
 }
 
 export async function getEventiPerGiorno(giorno) {

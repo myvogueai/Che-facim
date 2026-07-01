@@ -26,24 +26,31 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Ensure Firebase Storage bucket exists
+        id: ensure-bucket
+        continue-on-error: true
         run: |
           set -euo pipefail
           BUCKET="che-facim.firebasestorage.app"
           PROJECT="che-facim"
-          gcloud services enable firebasestorage.googleapis.com storage.googleapis.com \
-            --project "${PROJECT}"
           if gcloud storage buckets describe "gs://${BUCKET}" --project "${PROJECT}" >/dev/null 2>&1; then
             echo "Bucket gs://${BUCKET} già presente."
+            echo "bucket_ok=true" >> "$GITHUB_OUTPUT"
           else
-            echo "Bucket gs://${BUCKET} assente — creazione in europe-west1..."
-            gcloud storage buckets create "gs://${BUCKET}" \
+            echo "::warning::Bucket gs://${BUCKET} assente — tentativo creazione europe-west1..."
+            if gcloud storage buckets create "gs://${BUCKET}" \
               --project="${PROJECT}" \
               --location=europe-west1 \
-              --uniform-bucket-level-access
-            echo "Bucket creato."
+              --uniform-bucket-level-access; then
+              echo "Bucket creato."
+              echo "bucket_ok=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "::error::Impossibile creare il bucket. Abilita Storage in Firebase Console → Build → Storage → Inizia."
+              echo "bucket_ok=false" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       - name: Verify Storage bucket (Admin SDK)
+        if: steps.ensure-bucket.outputs.bucket_ok == 'true'
         run: |
           npm install @google-cloud/storage@7 --no-save
           node scripts/verify-storage-bucket.mjs
@@ -81,4 +88,10 @@ jobs:
           echo "storage_deployed=true" >> "$GITHUB_OUTPUT"
 
       - name: Verify Storage bucket pubblico
+        if: steps.ensure-bucket.outputs.bucket_ok == 'true'
         run: node scripts/verify-storage-ready.mjs
+
+      - name: Storage non configurato
+        if: steps.ensure-bucket.outputs.bucket_ok != 'true'
+        run: |
+          echo "::error::Firebase Storage non attivo: upload copertine admin fallirà finché non abiliti Storage in Console (Build → Storage → Inizia) sul progetto che-facim."

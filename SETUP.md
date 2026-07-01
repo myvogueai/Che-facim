@@ -66,15 +66,18 @@ Dopo il claim, l'admin deve fare logout e login su `/admin/` per refreshare il t
 
 ## 6. Attiva Storage (copertine evento)
 
-1. Menu laterale → Build → **Storage** → "Inizia"
-2. Scegli la regione (consigliata: `eur3` come Firestore)
-3. Pubblica le regole con:
+**Obbligatorio per l'upload copertine admin.** Il deploy delle sole `storage.rules` non crea il bucket.
+
+1. Menu laterale → Build → **Storage** → **Inizia** (Get started)
+2. Scegli la regione (consigliata: `eur3` / `europe-west1`, come Firestore)
+3. Verifica in Console che il bucket predefinito sia `che-facim.firebasestorage.app` (deve coincidere con `public/assets/firebase-config.js`)
+4. Pubblica le regole con:
 
 ```bash
 firebase deploy --only storage --project che-facim
 ```
 
-Le regole sono in `storage.rules` (lettura pubblica, scrittura solo admin).
+Se l'upload resta su "Upload copertina..." e poi va in timeout, il bucket probabilmente non esiste: ripeti il passo 1 in Console.
 
 ## 7. Pubblica regole Firestore e indici
 

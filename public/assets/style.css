@@ -885,7 +885,9 @@ body.pagina-home .modal-mappa-corpo .cerca-zona-bottone {
   align-items: center;
   padding: 10px 0 10px 12px;
   min-height: 128px;
-  touch-action: pan-x;
+  touch-action: manipulation;
+  text-decoration: none;
+  color: inherit;
 }
 
 .carosello-card .evento-card-h-titolo {

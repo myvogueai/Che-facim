@@ -209,27 +209,13 @@ export class MappaEsplora {
     el.addEventListener("pointercancel", fineTrascinamento);
 
     el.addEventListener("click", (e) => {
-      const card = e.target.closest(".carosello-card");
-      if (!card) return;
+      const link = e.target.closest(".carosello-card-link");
+      if (!link) return;
 
       if (this._caroselloPointer.moved) {
         e.preventDefault();
         this._caroselloPointer.moved = false;
-        return;
       }
-
-      const href = card.dataset.href;
-      if (href) {
-        window.location.href = href;
-      }
-    });
-
-    el.addEventListener("keydown", (e) => {
-      if (e.key !== "Enter" && e.key !== " ") return;
-      const card = e.target.closest(".carosello-card");
-      if (!card?.dataset.href) return;
-      e.preventDefault();
-      window.location.href = card.dataset.href;
     });
   }
 
@@ -618,8 +604,8 @@ export class MappaEsplora {
 
     if (carousel) {
       return `
-        <article class="carosello-card evento-card-h cat-${this._escape(cat)}${attivo}" data-id="${this._escape(ev.id)}" data-href="${href}" tabindex="0" aria-label="Apri ${this._escape(ev.titolo)}">
-          <div class="carosello-card-link evento-card-h-link">${contenuto}</div>
+        <article class="carosello-card evento-card-h cat-${this._escape(cat)}${attivo}" data-id="${this._escape(ev.id)}" aria-label="Apri ${this._escape(ev.titolo)}">
+          <a class="carosello-card-link evento-card-h-link" href="${href}">${contenuto}</a>
         </article>`;
     }
 

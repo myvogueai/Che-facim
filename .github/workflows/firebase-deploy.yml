@@ -24,10 +24,18 @@ jobs:
 
       - name: Deploy to Firebase Hosting
         run: |
-          npx firebase-tools@15.22.3 deploy \
+          set +e
+          output=$(npx firebase-tools@15.22.3 deploy \
             --only hosting \
             --project che-facim \
-            --non-interactive
+            --non-interactive 2>&1)
+          code=$?
+          echo "$output"
+          if [ $code -ne 0 ] && echo "$output" | grep -q "is the current active version"; then
+            echo "Hosting già aggiornato (versione già live) — deploy considerato riuscito."
+            exit 0
+          fi
+          exit $code
 
       - name: Deploy Firestore rules and indexes
         run: |
